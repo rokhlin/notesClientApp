@@ -24,6 +24,8 @@ import com.notes.client.components.PrimaryButton
 import com.notes.client.editor.MarkdownEngineRegistry
 import com.notes.client.editor.WikilinkAutocompletePopup
 import com.notes.client.editor.WikilinkParser
+import com.notes.client.storage.JsonIndexNoteRepository
+import com.notes.client.storage.StorageVaultDialog
 import com.notes.client.theme.NotesTheme
 import com.notes.common.models.CanvasLayer
 import com.notes.common.models.InkPoint
@@ -109,6 +111,15 @@ fun App() {
         var canvasUndoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
         var canvasRedoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
         var showExportCanvasDialog by remember { mutableStateOf(false) }
+        var showStorageDialog by remember { mutableStateOf(false) }
+
+        val storageRepository = remember {
+            val repo = JsonIndexNoteRepository()
+            if (repo.getCatalog().notes.isEmpty()) {
+                notes.forEach { repo.saveNote(it) }
+            }
+            repo
+        }
 
         // Compute incoming backlinks dynamically for the active note
         val activeBacklinks = remember(activeNote, notes) {
@@ -139,6 +150,7 @@ fun App() {
                     tags = listOf("new"),
                     createdAt = 1717030000000L
                 )
+                storageRepository.saveNote(newNote)
                 notes = listOf(newNote) + notes
                 activeNote = newNote
             },
@@ -470,6 +482,12 @@ fun App() {
                                 onCheckedChange = { isDarkTheme = it }
                             )
                         }
+                        FilledTonalButton(
+                            onClick = { showStorageDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🗄️ Inspect Sandboxed Vault & Index")
+                        }
                         Text(
                             "NotesAlltogether v1.0.0 (Compose Multiplatform)",
                             style = MaterialTheme.typography.labelSmall,
@@ -482,6 +500,13 @@ fun App() {
                         Text("Close")
                     }
                 }
+            )
+        }
+
+        if (showStorageDialog) {
+            StorageVaultDialog(
+                repository = storageRepository,
+                onDismiss = { showStorageDialog = false }
             )
         }
     }

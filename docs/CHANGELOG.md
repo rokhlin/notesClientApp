@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `CmnPackageSerializer` for native `.cmn` compound package format with dedicated `CMN\x01` (`0x43 0x4D 0x4E 0x01`) magic header enforcement and JSON manifest payload encoding/decoding.
 - Implemented `SvgExporter` converting multi-layer Catmull-Rom smoothed Bézier curves into standard infinite-resolution W3C SVG XML documents.
 - Added `ExportCanvasDialog` with live SVG markup preview, binary header status verification, code copy, and download actions.
+- Implemented `NoteStorageRepository` and `JsonIndexNoteRepository` providing zero-SQL sandboxed file persistence (ADR Q19) with decoupled note payload files.
+- Built lightweight title-only indexing catalog `notes_index.json` (ADR Q17) guaranteeing zero leakage of note contents during high-speed in-memory queries.
+- Added `StorageVaultDialog` storage inspector in settings with live catalog inspection, vault storage metrics, and orphan file re-indexing.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.
