@@ -1,0 +1,47 @@
+# Gradle files
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin
+.kotlin/
+
+# Android
+local.properties
+.cxx/
+*.apk
+*.aab
+
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.navigation/
+captures/
+
+# VS Code
+.vscode/
+
+# iOS / Xcode
+iosApp/*.xcodeproj/*
+!iosApp/*.xcodeproj/project.pbxproj
+iosApp/*.xcworkspace/*
+!iosApp/*.xcworkspace/contents.xcworkspacedata
+iosApp/**/xcuserdata/
+iosApp/**/DerivedData/
+iosApp/build/
+iosApp/*.moved-aside
+*.orig.*
+
+# Web / Node
+node_modules/
+.kotlin-js-store/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
