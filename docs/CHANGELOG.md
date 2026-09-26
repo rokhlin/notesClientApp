@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `ShapeRecognizer` classifying geometric primitives (Straight Line, Rectangle, Circle, Ellipse, Triangle) with mathematical boundary, perimeter, and radial error variance algorithms.
 - Added 0.5s draw-and-hold auto-snapping to `SkiaHandwrittenCanvas`, automatically replacing rough contours with crisp canonical geometries.
 - Added Shapes Tool popup in `CanvasToolbar` enabling direct insertion of centered vector primitives into the active canvas layer.
+- Implemented `CmnPackageSerializer` for native `.cmn` compound package format with dedicated `CMN\x01` (`0x43 0x4D 0x4E 0x01`) magic header enforcement and JSON manifest payload encoding/decoding.
+- Implemented `SvgExporter` converting multi-layer Catmull-Rom smoothed Bézier curves into standard infinite-resolution W3C SVG XML documents.
+- Added `ExportCanvasDialog` with live SVG markup preview, binary header status verification, code copy, and download actions.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.notes.client.canvas.CanvasToolbar
 import com.notes.client.canvas.SkiaHandwrittenCanvas
+import com.notes.client.canvas.export.ExportCanvasDialog
 import com.notes.client.canvas.instruments.BrushConfig
 import com.notes.client.canvas.shapes.ShapeRecognizer
 import com.notes.client.components.ObsidianScaffold
@@ -107,6 +108,7 @@ fun App() {
         }
         var canvasUndoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
         var canvasRedoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
+        var showExportCanvasDialog by remember { mutableStateOf(false) }
 
         // Compute incoming backlinks dynamically for the active note
         val activeBacklinks = remember(activeNote, notes) {
@@ -186,6 +188,12 @@ fun App() {
                                         labelColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                FilledTonalButton(
+                                    onClick = { showExportCanvasDialog = true }
+                                ) {
+                                    Text("📤 Export")
+                                }
                             }
 
                             // Interactive Viewport with Skia Handwritten Canvas and Floating Samsung Notes Toolbar
@@ -264,6 +272,14 @@ fun App() {
                                         canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to updated)
                                     },
                                     modifier = Modifier.align(Alignment.BottomCenter)
+                                )
+                            }
+
+                            if (showExportCanvasDialog) {
+                                ExportCanvasDialog(
+                                    title = currentNote.title,
+                                    layers = currentLayers,
+                                    onDismiss = { showExportCanvasDialog = false }
                                 )
                             }
                         }
