@@ -31,6 +31,7 @@ Dependencies are organized across architectural domains:
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Core UI** | Client | **Compose Multiplatform UI** | `org.jetbrains.compose.ui:ui` | Multiplatform declarative UI foundation | **Active** | Core UI runtime |
 | **Core UI** | Client | **Material 3 Multiplatform** | `org.jetbrains.compose.material3:material3` | Adaptive themes, color tokens, and components | **Active** | Adopted as primary UI design system (Q30) |
+| **Core Architecture** | Shared | **Common Models Module** | `:common-models` | Unified domain models, canvas vector schemas & sync DTOs | **Active** | Single source of truth across client and server (Q2) |
 | **Core UI** | Client | **Compose Navigation** | `org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10` | Type-safe multiplatform navigation routing | **Planned (Phase 0)** | Chosen navigation framework (Q3) |
 | **Core UI** | Client | **Window Size Class** | `org.jetbrains.compose.material3:material3-window-size-class` | Responsive layout switching (Phone vs Foldable vs Tablet) | **Planned (Phase 0)** | Adaptive drawer vs multi-pane UI |
 | **Editor** | Client | **Markdown Parser (AST)** | `org.jetbrains.markdown:markdown:0.7.3` | CommonMark AST parser for Source and Reading modes | **Planned (Phase 1)** | Core parser for default engine |

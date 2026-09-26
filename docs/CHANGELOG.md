@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Initial project structure for Compose Multiplatform client.
+- Implemented shared Kotlin Multiplatform `:common-models` module defining `Note`, `InkPoint`, `InkStroke`, `CanvasLayer`, `CmnManifest`, `NoteMetadata`, `NotesIndexCatalog`, and `SyncDTOs`.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.
