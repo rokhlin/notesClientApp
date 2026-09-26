@@ -152,12 +152,50 @@ class AstMarkdownEngine : MarkdownEngine {
                         }
                     }
                     is MarkdownBlock.Paragraph -> {
-                        Text(
-                            text = block.text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
+                        val segments = remember(block.text) { WikilinkParser.parseInlineSegments(block.text) }
+                        if (segments.size == 1 && segments.first() is InlineSegment.Text) {
+                            Text(
+                                text = block.text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                segments.forEach { segment ->
+                                    when (segment) {
+                                        is InlineSegment.Text -> {
+                                            Text(
+                                                text = segment.content,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        is InlineSegment.Link -> {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                                modifier = Modifier.clickable { onLinkClick(segment.wikilink.targetTitle) }
+                                            ) {
+                                                Text(
+                                                    text = "🔗 " + segment.wikilink.displayLabel,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -30,6 +30,8 @@ fun ObsidianScaffold(
     isDarkTheme: Boolean,
     activeEngineId: String = "ast-renderer",
     onEngineSelected: ((String) -> Unit)? = null,
+    backlinks: List<com.notes.client.editor.Backlink> = emptyList(),
+    onBacklinkClick: ((String) -> Unit)? = null,
     onNoteSelected: (Note) -> Unit,
     onCreateNote: (String) -> Unit,
     onToggleTheme: () -> Unit,
@@ -376,6 +378,48 @@ fun ObsidianScaffold(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
+                            if (backlinks.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Backlinks (${backlinks.size})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    backlinks.forEach { backlink ->
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onBacklinkClick?.invoke(backlink.sourceNoteId) },
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                            border = androidx.compose.foundation.BorderStroke(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                            )
+                                        ) {
+                                            Column(modifier = Modifier.padding(8.dp)) {
+                                                Text(
+                                                    text = "🔗 " + backlink.sourceNoteTitle,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Text(
+                                                    text = backlink.snippet,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

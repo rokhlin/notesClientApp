@@ -15,6 +15,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.notes.client.components.ObsidianScaffold
 import com.notes.client.components.PrimaryButton
+import com.notes.client.editor.MarkdownEngineRegistry
+import com.notes.client.editor.WikilinkAutocompletePopup
+import com.notes.client.editor.WikilinkParser
 import com.notes.client.theme.NotesTheme
 import com.notes.common.models.Note
 import com.notes.common.models.NoteType
@@ -30,7 +33,7 @@ fun App() {
                     Note(
                         id = "1",
                         title = "Architecture Blueprint",
-                        content = "# Architecture Blueprint\n\nWelcome to NotesAlltogether unified workspace. Built with Kotlin Multiplatform, Compose Multiplatform, and Obsidian-style ergonomics.",
+                        content = "# Architecture Blueprint\n\nWelcome to NotesAlltogether unified workspace. Built with Kotlin Multiplatform, Compose Multiplatform, and Obsidian-style ergonomics.\n\nSee [[Getting Started with KMP]] and [[Canvas Wireframes]] for subsystem details.",
                         type = NoteType.TEXT,
                         tags = listOf("architecture", "sdm", "starred"),
                         createdAt = 1717000000000L
@@ -38,7 +41,7 @@ fun App() {
                     Note(
                         id = "2",
                         title = "Getting Started with KMP",
-                        content = "# Getting Started with KMP\n\nCompose Multiplatform shares the UI code across Android, iOS, Desktop, and Web while keeping 100% native performance.",
+                        content = "# Getting Started with KMP\n\nCompose Multiplatform shares the UI code across Android, iOS, Desktop, and Web while keeping 100% native performance.\n\nFollows [[Architecture Blueprint]] system boundaries.",
                         type = NoteType.TEXT,
                         tags = listOf("kmp", "compose"),
                         createdAt = 1717010000000L
@@ -46,7 +49,7 @@ fun App() {
                     Note(
                         id = "3",
                         title = "Canvas Wireframes",
-                        content = "Continuous vertical roll canvas engine with Catmull-Rom splines, S-Pen tilt/pressure, and .cmn compound storage.",
+                        content = "# Canvas Wireframes\n\nContinuous vertical roll canvas engine with Catmull-Rom splines, S-Pen tilt/pressure, and .cmn compound storage.\n\nIntegrated with [[Architecture Blueprint]].",
                         type = NoteType.CANVAS,
                         tags = listOf("canvas", "skia", "starred"),
                         createdAt = 1717020000000L
@@ -60,7 +63,15 @@ fun App() {
         var showSettingsDialog by remember { mutableStateOf(false) }
         var activeEngineId by remember { mutableStateOf("ast-renderer") }
         var isEditMode by remember { mutableStateOf(false) }
-        val currentEngine = remember(activeEngineId) { com.notes.client.editor.MarkdownEngineRegistry.getEngine(activeEngineId) }
+        var unresolvedLinkTarget by remember { mutableStateOf<String?>(null) }
+        val currentEngine = remember(activeEngineId) { MarkdownEngineRegistry.getEngine(activeEngineId) }
+
+        // Compute incoming backlinks dynamically for the active note
+        val activeBacklinks = remember(activeNote, notes) {
+            activeNote?.let {
+                WikilinkParser.findBacklinks(it.title, notes)
+            } ?: emptyList()
+        }
 
         ObsidianScaffold(
             notes = notes,
@@ -68,6 +79,10 @@ fun App() {
             isDarkTheme = isDarkTheme,
             activeEngineId = activeEngineId,
             onEngineSelected = { activeEngineId = it },
+            backlinks = activeBacklinks,
+            onBacklinkClick = { sourceId ->
+                notes.find { it.id == sourceId }?.let { activeNote = it }
+            },
             onNoteSelected = { note ->
                 activeNote = note
             },
@@ -117,7 +132,7 @@ fun App() {
                             }
                         }
                     } else {
-                        // Markdown Text Editor Canvas with Pluggable Engine
+                        // Markdown Text Editor Canvas with Pluggable Engine & Wikilinks
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,28 +167,56 @@ fun App() {
                         }
 
                         if (isEditMode) {
-                            OutlinedTextField(
-                                value = currentNote.content,
-                                onValueChange = { newContent ->
-                                    val updated = currentNote.copy(content = newContent)
-                                    activeNote = updated
-                                    notes = notes.map { if (it.id == updated.id) updated else it }
-                                },
-                                textStyle = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                            val content = currentNote.content
+                            // Check if cursor/content currently has an active [[ autocomplete query
+                            val showAutocomplete = content.contains("[[") && !content.substringAfterLast("[[").contains("]")
+                            val autocompleteQuery = if (showAutocomplete) content.substringAfterLast("[[").trim() else ""
+
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                OutlinedTextField(
+                                    value = currentNote.content,
+                                    onValueChange = { newContent ->
+                                        val updated = currentNote.copy(content = newContent)
+                                        activeNote = updated
+                                        notes = notes.map { if (it.id == updated.id) updated else it }
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.fillMaxSize(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                                    )
                                 )
-                            )
+
+                                if (showAutocomplete) {
+                                    WikilinkAutocompletePopup(
+                                        query = autocompleteQuery,
+                                        allNotes = notes,
+                                        onSelectNote = { selected ->
+                                            val prefix = content.substringBeforeLast("[[")
+                                            val newContent = "$prefix[[${selected.title}]] "
+                                            val updated = currentNote.copy(content = newContent)
+                                            activeNote = updated
+                                            notes = notes.map { if (it.id == updated.id) updated else it }
+                                        },
+                                        onDismiss = { /* Dismiss popup */ },
+                                        modifier = Modifier.align(Alignment.TopStart).padding(top = 40.dp)
+                                    )
+                                }
+                            }
                         } else {
-                            // Pluggable Engine Rendering
+                            // Pluggable Engine Rendering with Wikilink Navigation
                             currentEngine.Render(
                                 content = currentNote.content,
                                 modifier = Modifier.weight(1f),
-                                onLinkClick = { /* Handle link navigation */ }
+                                onLinkClick = { linkTitle ->
+                                    val target = notes.find { it.title.equals(linkTitle, ignoreCase = true) }
+                                    if (target != null) {
+                                        activeNote = target
+                                    } else {
+                                        unresolvedLinkTarget = linkTitle
+                                    }
+                                }
                             )
                         }
                     }
@@ -205,6 +248,40 @@ fun App() {
                     }
                 }
             }
+        }
+
+        // Unresolved Note Creation Dialog
+        unresolvedLinkTarget?.let { targetTitle ->
+            AlertDialog(
+                onDismissRequest = { unresolvedLinkTarget = null },
+                title = { Text("Create Linked Note") },
+                text = {
+                    Text("The note \"$targetTitle\" does not exist yet. Would you like to create and open it now?")
+                },
+                confirmButton = {
+                    PrimaryButton(
+                        text = "Create Note",
+                        onClick = {
+                            val newNote = Note(
+                                id = (notes.size + 1).toString(),
+                                title = targetTitle,
+                                content = "# $targetTitle\n\n",
+                                type = NoteType.TEXT,
+                                tags = listOf("linked"),
+                                createdAt = 1717040000000L
+                            )
+                            notes = listOf(newNote) + notes
+                            activeNote = newNote
+                            unresolvedLinkTarget = null
+                        }
+                    )
+                },
+                dismissButton = {
+                    TextButton(onClick = { unresolvedLinkTarget = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         if (showAddDialog) {

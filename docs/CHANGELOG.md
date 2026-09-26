@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented floating `QuickSwitcherDialog` (`Ctrl/Cmd + O`) with real-time fuzzy search, keyboard navigation (`ArrowUp`/`ArrowDown`/`Enter`/`Esc`), and empty-query note creation action.
 - Implemented `MarkdownEngine` pluggable strategy architecture (ADR Q5) with `MarkdownEngineRegistry`, `AstMarkdownEngine` (fast CommonMark AST parsing), and `RichTextMarkdownEngine` (WYSIWYG live rendering with callouts and interactive checklists).
 - Added workspace engine selector control with live source edit / rendered view toggle.
+- Implemented `WikilinkParser` supporting standard `[[TargetNote]]` and aliased `[[TargetNote|Display Text]]` wikilinks with bi-directional backlink discovery across notes.
+- Implemented interactive `WikilinkAutocompletePopup` triggerable on typing `[[` in markdown source mode with fuzzy filtering and keyboard navigation.
+- Integrated clickable wikilink chip rendering in both AST and Rich-Text markdown engines with navigation dispatch and unresolved note prompt.
+- Added live incoming backlinks inspector pane in `ObsidianScaffold` right inspector with count badges and direct note navigation.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.
