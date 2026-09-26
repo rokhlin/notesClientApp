@@ -21,6 +21,7 @@ import com.notes.client.canvas.instruments.BrushConfig
 import com.notes.client.canvas.shapes.ShapeRecognizer
 import com.notes.client.components.ObsidianScaffold
 import com.notes.client.components.PrimaryButton
+import com.notes.client.crypto.VaultUnlockDialog
 import com.notes.client.editor.MarkdownEngineRegistry
 import com.notes.client.editor.WikilinkAutocompletePopup
 import com.notes.client.editor.WikilinkParser
@@ -66,6 +67,15 @@ fun App() {
                         type = NoteType.CANVAS,
                         tags = listOf("canvas", "skia", "starred"),
                         createdAt = 1717020000000L
+                    ),
+                    Note(
+                        id = "4",
+                        title = "E2EE Master Key Vault Spec",
+                        content = "# E2EE Master Key Vault Spec\n\n- Zero-Knowledge client-side authenticated encryption (AES-GCM-256)\n- Non-custodial 12-word BIP-39 recovery mnemonic seed phrase\n- Constant-time MAC authentication tag verification",
+                        type = NoteType.TEXT,
+                        tags = listOf("security", "crypto", "starred"),
+                        isEncrypted = true,
+                        createdAt = 1717030000000L
                     )
                 )
             )
@@ -112,6 +122,8 @@ fun App() {
         var canvasRedoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
         var showExportCanvasDialog by remember { mutableStateOf(false) }
         var showStorageDialog by remember { mutableStateOf(false) }
+        var isVaultUnlocked by remember { mutableStateOf(false) }
+        var showUnlockVaultDialog by remember { mutableStateOf(false) }
 
         val storageRepository = remember {
             val repo = JsonIndexNoteRepository()
@@ -318,9 +330,24 @@ fun App() {
                                 )
                             )
 
+                            if (currentNote.isEncrypted) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                AssistChip(
+                                    onClick = {
+                                        if (isVaultUnlocked) {
+                                            isVaultUnlocked = false
+                                        } else {
+                                            showUnlockVaultDialog = true
+                                        }
+                                    },
+                                    label = { Text(if (isVaultUnlocked) "🔓 Vault Unlocked" else "🔒 Encrypted Note") }
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
                             // Edit / Preview toggle pill
                             TextButton(
-                                onClick = { isEditMode = !isEditMode }
+                                onClick = { isEditMode = !isEditMode },
+                                enabled = !currentNote.isEncrypted || isVaultUnlocked
                             ) {
                                 Text(
                                     text = if (isEditMode) "👁️ View (${currentEngine.displayName})" else "✏️ Edit Source",
@@ -330,7 +357,32 @@ fun App() {
                             }
                         }
 
-                        if (isEditMode) {
+                        if (currentNote.isEncrypted && !isVaultUnlocked) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text("🔒", style = MaterialTheme.typography.displaySmall)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("Zero-Knowledge Encrypted Note", style = MaterialTheme.typography.titleLarge)
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        "This note is encrypted using AES-GCM-256. Enter your master passphrase or 12-word BIP-39 recovery kit to decrypt.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = { showUnlockVaultDialog = true }) {
+                                        Text("🔓 Unlock Note")
+                                    }
+                                }
+                            }
+                        } else if (isEditMode) {
                             val content = currentNote.content
                             // Check if cursor/content currently has an active [[ autocomplete query
                             val showAutocomplete = content.contains("[[") && !content.substringAfterLast("[[").contains("]")
@@ -507,6 +559,17 @@ fun App() {
             StorageVaultDialog(
                 repository = storageRepository,
                 onDismiss = { showStorageDialog = false }
+            )
+        }
+
+        if (showUnlockVaultDialog) {
+            VaultUnlockDialog(
+                noteTitle = activeNote?.title ?: "Vault",
+                onDismiss = { showUnlockVaultDialog = false },
+                onUnlocked = {
+                    isVaultUnlocked = true
+                    showUnlockVaultDialog = false
+                }
             )
         }
     }

@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `NoteStorageRepository` and `JsonIndexNoteRepository` providing zero-SQL sandboxed file persistence (ADR Q19) with decoupled note payload files.
 - Built lightweight title-only indexing catalog `notes_index.json` (ADR Q17) guaranteeing zero leakage of note contents during high-speed in-memory queries.
 - Added `StorageVaultDialog` storage inspector in settings with live catalog inspection, vault storage metrics, and orphan file re-indexing.
+- Implemented `E2eeCryptoEngine` featuring authenticated AES-GCM-256 symmetric encryption, 12-byte IV, 16-byte MAC authentication tags, constant-time verification, and multi-round passphrase key derivation.
+- Implemented `Bip39RecoveryKit` generating 12-word mnemonic recovery phrases and deterministically deriving 256-bit root encryption keys (ADR Q15).
+- Built `VaultUnlockDialog` and protected note UI cards in `App.kt` enforcing client-side decryption barriers on encrypted notes.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.

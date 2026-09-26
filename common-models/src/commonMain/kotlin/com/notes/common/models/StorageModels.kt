@@ -19,3 +19,12 @@ data class NotesIndexCatalog(
     val lastSyncedAt: Long = 0L,
     val notes: List<NoteMetadata> = emptyList()
 )
+
+@Serializable
+data class EncryptedPayload(
+    val algorithm: String = "AES-GCM-256",
+    val ivHex: String,
+    val tagHex: String,
+    val ciphertextBase64: String
+)
+
