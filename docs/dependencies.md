@@ -72,9 +72,8 @@ Dependencies are organized across architectural domains:
 | :--- | :--- | :--- | :--- | :--- |
 | **Figma MCP Server** | Antigravity IDE | Sync design tokens & layouts from Figma | **Postponed / Not Applicable** | No Figma link available; developing with Material 3 in code (Q30) |
 | **Android Virtual Devices** | `android-cli-plugin` | UI inspection, screenshots, and foldable display emulation | **Available** | Primary testing ground for Android tablet/foldable targets |
-| **DevTools MCP** | `chrome-devtools-plugin` | Performance profiling, memory leak detection, Wasm debugging | **Available** | Web/Wasm target verification |
-| **Subagents** (`.agents/agents`) | Project-level AI Roles | Specialized agents for Canvas, Markdown Editor, Crypto Vault, and Sync | **Planned** | Roles to be created for phased tasks |
-| **Custom Skills** (`.agents/skills`) | Knowledge Guides | Procedural cheatsheets for Skia Canvas drawing and `.cmn` file format | **Planned** | Multiplatform Canvas & container format guides |
+| **Subagents** (`.agents/agents`) | Project-level AI Roles | Specialized agents for Canvas (`canvas-specialist`), Markdown Editor, Crypto Vault, and Sync | **Active** (Canvas) / **Planned** (Others) | Canvas Specialist created; other roles to follow in respective phases |
+| **Custom Skills** (`.agents/skills`) | Knowledge Guides | Procedural cheatsheets for Skia Canvas drawing (`skia-canvas-drawing`) and `.cmn` file format (`cmn-file-format`) | **Active** (Canvas & .cmn) | Multiplatform Canvas & compound container format guides ready |
 
 ---
 
