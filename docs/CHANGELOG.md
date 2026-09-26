@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented interactive `WikilinkAutocompletePopup` triggerable on typing `[[` in markdown source mode with fuzzy filtering and keyboard navigation.
 - Integrated clickable wikilink chip rendering in both AST and Rich-Text markdown engines with navigation dispatch and unresolved note prompt.
 - Added live incoming backlinks inspector pane in `ObsidianScaffold` right inspector with count badges and direct note navigation.
+- Implemented `CatmullRomConverter` supporting cubic Bézier spline interpolation and boundary ghost point synthesis for fluid handwritten inking.
+- Added `BrushConfig` with dynamic pressure modulation formulas across 6 writing instruments (`PEN`, `FOUNTAIN_PEN`, `PENCIL`, `CALLIGRAPHY_BRUSH`, `HIGHLIGHTER`, `VECTOR_ERASER`).
+- Built continuous vertical page roll `SkiaHandwrittenCanvas` with visual page break dividers, multi-layer cached path rendering, two-finger pan/zoom, and vector eraser hit-testing.
+- Built floating Samsung Notes inking `CanvasToolbar` with instrument switcher, color swatches, dynamic stroke width slider, and undo/redo/clear controls.
+- Embedded handwritten vector canvas directly into `App.kt` when opening `NoteType.CANVAS` notes.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.

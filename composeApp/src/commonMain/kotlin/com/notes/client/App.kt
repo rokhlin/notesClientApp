@@ -10,17 +10,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.notes.client.canvas.CanvasToolbar
+import com.notes.client.canvas.SkiaHandwrittenCanvas
+import com.notes.client.canvas.instruments.BrushConfig
 import com.notes.client.components.ObsidianScaffold
 import com.notes.client.components.PrimaryButton
 import com.notes.client.editor.MarkdownEngineRegistry
 import com.notes.client.editor.WikilinkAutocompletePopup
 import com.notes.client.editor.WikilinkParser
 import com.notes.client.theme.NotesTheme
+import com.notes.common.models.CanvasLayer
+import com.notes.common.models.InkPoint
+import com.notes.common.models.InkStroke
+import com.notes.common.models.LayerType
 import com.notes.common.models.Note
 import com.notes.common.models.NoteType
+import com.notes.common.models.ToolType
 
 @Composable
 fun App() {
@@ -66,6 +75,38 @@ fun App() {
         var unresolvedLinkTarget by remember { mutableStateOf<String?>(null) }
         val currentEngine = remember(activeEngineId) { MarkdownEngineRegistry.getEngine(activeEngineId) }
 
+        // Canvas state for handwritten notes
+        var canvasBrush by remember { mutableStateOf(BrushConfig.defaultFor(ToolType.PEN)) }
+        var canvasLayersByNoteId by remember {
+            mutableStateOf<Map<String, List<CanvasLayer>>>(
+                mapOf(
+                    "3" to listOf(
+                        CanvasLayer(
+                            id = "layer_3_1",
+                            name = "Vector Layer 1",
+                            layerType = LayerType.VECTOR,
+                            strokes = listOf(
+                                InkStroke(
+                                    id = "initial_stroke",
+                                    tool = ToolType.PEN,
+                                    colorHex = "#4F46E5",
+                                    strokeWidth = 4f,
+                                    points = listOf(
+                                        InkPoint(100f, 150f, 0.5f),
+                                        InkPoint(200f, 130f, 0.7f),
+                                        InkPoint(300f, 220f, 0.9f),
+                                        InkPoint(400f, 180f, 0.6f)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        }
+        var canvasUndoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
+        var canvasRedoHistory by remember { mutableStateOf<List<List<CanvasLayer>>>(emptyList()) }
+
         // Compute incoming backlinks dynamically for the active note
         val activeBacklinks = remember(activeNote, notes) {
             activeNote?.let {
@@ -109,25 +150,89 @@ fun App() {
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     if (currentNote.type == NoteType.CANVAS) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        val currentLayers = canvasLayersByNoteId[currentNote.id] ?: listOf(
+                            CanvasLayer(
+                                id = "layer_${currentNote.id}",
+                                name = "Vector Layer 1",
+                                layerType = LayerType.VECTOR,
+                                strokes = emptyList()
                             )
-                        ) {
-                            Column(modifier = Modifier.padding(24.dp)) {
-                                Text("🎨 Samsung Notes Skia Canvas Layer", style = MaterialTheme.typography.titleLarge)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "Continuous vertical roll canvas engine with Catmull-Rom splines and .cmn storage.",
-                                    style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Top Bar with Canvas Note Title & Details
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = currentNote.title,
+                                    onValueChange = { newTitle ->
+                                        val updated = currentNote.copy(title = newTitle)
+                                        activeNote = updated
+                                        notes = notes.map { if (it.id == updated.id) updated else it }
+                                    },
+                                    label = { Text("Canvas Document Title") },
+                                    modifier = Modifier.weight(1f).padding(end = 16.dp),
+                                    singleLine = true
                                 )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                PrimaryButton(
-                                    text = "Start Drawing with Stylus",
-                                    onClick = { }
+                                AssistChip(
+                                    onClick = { },
+                                    label = { Text("✏️ Skia Continuous Roll") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                            }
+
+                            // Interactive Viewport with Skia Handwritten Canvas and Floating Samsung Notes Toolbar
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                            ) {
+                                SkiaHandwrittenCanvas(
+                                    modifier = Modifier.fillMaxSize(),
+                                    layers = currentLayers,
+                                    onLayersChange = { newLayers ->
+                                        canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                        canvasRedoHistory = emptyList()
+                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to newLayers)
+                                    },
+                                    currentBrush = canvasBrush
+                                )
+
+                                CanvasToolbar(
+                                    currentBrush = canvasBrush,
+                                    onBrushChange = { canvasBrush = it },
+                                    canUndo = canvasUndoHistory.isNotEmpty(),
+                                    canRedo = canvasRedoHistory.isNotEmpty(),
+                                    onUndo = {
+                                        if (canvasUndoHistory.isNotEmpty()) {
+                                            val previousState = canvasUndoHistory.last()
+                                            canvasUndoHistory = canvasUndoHistory.dropLast(1)
+                                            canvasRedoHistory = canvasRedoHistory + listOf(currentLayers)
+                                            canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to previousState)
+                                        }
+                                    },
+                                    onRedo = {
+                                        if (canvasRedoHistory.isNotEmpty()) {
+                                            val nextState = canvasRedoHistory.last()
+                                            canvasRedoHistory = canvasRedoHistory.dropLast(1)
+                                            canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                            canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to nextState)
+                                        }
+                                    },
+                                    onClear = {
+                                        canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                        canvasRedoHistory = emptyList()
+                                        val cleared = currentLayers.map { it.copy(strokes = emptyList()) }
+                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to cleared)
+                                    },
+                                    modifier = Modifier.align(Alignment.BottomCenter)
                                 )
                             }
                         }
