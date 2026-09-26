@@ -13,13 +13,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.notes.common.models.Note
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.notes.client.components.AppScaffold
+import com.notes.client.components.PrimaryButton
 import com.notes.client.theme.NotesTheme
+import com.notes.common.models.Note
+import com.notes.common.models.NoteType
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    NotesTheme {
+    var isDarkTheme by remember { mutableStateOf(true) }
+
+    NotesTheme(darkTheme = isDarkTheme) {
+        val navController = rememberNavController()
+        var currentRoute by remember { mutableStateOf("notes") }
+
         var notes by remember {
             mutableStateOf(
                 listOf(
@@ -27,12 +37,16 @@ fun App() {
                         id = "1",
                         title = "Welcome to NotesAlltogether",
                         content = "This is your multiplatform notes app running smoothly across Android, iOS, and Web!",
+                        type = NoteType.TEXT,
+                        tags = listOf("welcome", "getting-started"),
                         createdAt = 1717000000000L
                     ),
                     Note(
                         id = "2",
                         title = "Getting Started with KMP",
                         content = "Compose Multiplatform shares the UI code across all platforms while keeping native performance.",
+                        type = NoteType.TEXT,
+                        tags = listOf("kmp", "compose"),
                         createdAt = 1717010000000L
                     )
                 )
@@ -51,74 +65,147 @@ fun App() {
             }
         }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "NotesAlltogether",
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
+        val screenTitle = when (currentRoute) {
+            "notes" -> "Notes Alltogether"
+            "canvas" -> "Handwritten Canvas"
+            "settings" -> "Settings & Vault"
+            else -> "Notes Alltogether"
+        }
+
+        AppScaffold(
+            title = screenTitle,
+            currentRoute = currentRoute,
+            onNavigate = { route ->
+                currentRoute = route
+                navController.navigate(route) {
+                    popUpTo("notes") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
+                if (currentRoute == "notes") {
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                        Text("+", style = MaterialTheme.typography.titleLarge)
+                    }
                 }
             }
         ) { paddingValues ->
-            Column(
+            NavHost(
+                navController = navController,
+                startDestination = "notes",
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
             ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search notes...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
+                composable("notes") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search notes...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
 
-                if (filteredNotes.isEmpty()) {
+                        if (filteredNotes.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (searchQuery.isEmpty()) "No notes yet. Click + to create one!" else "No matching notes found.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(bottom = 80.dp)
+                            ) {
+                                items(filteredNotes, key = { it.id }) { note ->
+                                    NoteCard(
+                                        note = note,
+                                        onClick = { selectedNote = note },
+                                        onDelete = {
+                                            notes = notes.filter { it.id != note.id }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                composable("canvas") {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = if (searchQuery.isEmpty()) "No notes yet. Click + to create one!" else "No matching notes found.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(24.dp)) {
+                                Text("🎨 Samsung Notes Skia Canvas", style = MaterialTheme.typography.titleLarge)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Continuous vertical roll canvas engine with Catmull-Rom splines, S-Pen tilt/pressure, and .cmn compound storage.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                PrimaryButton(
+                                    text = "Open New Canvas Note",
+                                    onClick = { }
+                                )
+                            }
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
+                }
+
+                composable("settings") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(filteredNotes, key = { it.id }) { note ->
-                            NoteCard(
-                                note = note,
-                                onClick = { selectedNote = note },
-                                onDelete = {
-                                    notes = notes.filter { it.id != note.id }
+                        Text("Theme & Preferences", style = MaterialTheme.typography.titleLarge)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Dark Theme", style = MaterialTheme.typography.titleMedium)
+                                    Text("Material 3 high-contrast palette", style = MaterialTheme.typography.bodySmall)
                                 }
-                            )
+                                Switch(
+                                    checked = isDarkTheme,
+                                    onCheckedChange = { isDarkTheme = it }
+                                )
+                            }
                         }
                     }
                 }
@@ -197,6 +284,25 @@ fun NoteCard(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             )
+
+            if (note.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    note.tags.forEach { tag ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "#$tag",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -232,16 +338,11 @@ fun AddNoteDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    if (title.isNotBlank()) {
-                        onAdd(title, content)
-                    }
-                },
-                enabled = title.isNotBlank()
-            ) {
-                Text("Save")
-            }
+            PrimaryButton(
+                text = "Create",
+                enabled = title.isNotBlank(),
+                onClick = { onAdd(title, content) }
+            )
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
@@ -258,15 +359,22 @@ fun NoteDetailDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(note.title) },
-        text = {
+        title = {
             Text(
-                text = note.content,
-                style = MaterialTheme.typography.bodyMedium
+                text = note.title,
+                style = MaterialTheme.typography.titleLarge
             )
         },
+        text = {
+            Column {
+                Text(
+                    text = note.content,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
         confirmButton = {
-            Button(onClick = onDismiss) {
+            TextButton(onClick = onDismiss) {
                 Text("Close")
             }
         }

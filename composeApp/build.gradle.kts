@@ -51,7 +51,11 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.navigation.compose)
             implementation(project(":common-models"))
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }
