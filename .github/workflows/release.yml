@@ -1,0 +1,108 @@
+name: Release Application & Update Changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Specific release version (leave blank to auto-bump, e.g. 1.1.0)'
+        required: false
+        type: string
+        default: ''
+      bump_type:
+        description: 'SemVer bump type (used if specific version is blank)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Release & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git User
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare Release, Changelog & Version Bump
+        id: prep
+        env:
+          INPUT_RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          INPUT_BUMP_TYPE: ${{ github.event.inputs.bump_type }}
+        run: node .github/workflows/scripts/prepare-release.js
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant Execute Permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build Android Release APK & Web Wasm Distribution
+        run: |
+          ./gradlew :composeApp:assembleRelease :composeApp:wasmJsBrowserDistribution --no-daemon
+
+      - name: Package Release Assets
+        id: package
+        run: |
+          VERSION="${{ steps.prep.outputs.version }}"
+          mkdir -p release-artifacts
+          
+          # Find and package Android APK
+          APK_PATH=$(find composeApp/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
+            cp "$APK_PATH" "release-artifacts/notes-client-v${VERSION}-android.apk"
+          else
+            echo "Warning: No release APK found at composeApp/build/outputs/apk/release"
+          fi
+          
+          # Package Wasm Web distribution
+          if [ -d "composeApp/build/dist/wasmJs/productionExecutable" ]; then
+            (cd composeApp/build/dist/wasmJs/productionExecutable && zip -r ../../../../../release-artifacts/notes-client-v${VERSION}-web-wasm.zip .)
+          fi
+
+      - name: Commit & Push Version Bump and Changelog
+        run: |
+          git add gradle.properties CHANGELOG.md
+          git commit -m "chore(release): bump version to ${{ steps.prep.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Create Git Tag
+        run: |
+          TAG="${{ steps.prep.outputs.tag }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prep.outputs.tag }}
+          name: Notes Client Release ${{ steps.prep.outputs.tag }}
+          body_path: ${{ steps.prep.outputs.release_notes_path }}
+          files: |
+            release-artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

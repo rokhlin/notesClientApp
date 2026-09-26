@@ -63,8 +63,8 @@ android {
         applicationId = "com.notes.client"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (findProperty("app.versionCode") as? String)?.toIntOrNull() ?: 1
+        versionName = (findProperty("app.versionName") as? String) ?: "1.0.0"
     }
     packaging {
         resources {
