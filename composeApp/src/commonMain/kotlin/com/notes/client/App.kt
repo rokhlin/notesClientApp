@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.notes.client.models.Note
+import com.notes.common.models.Note
 import com.notes.client.theme.NotesTheme
 
 @OptIn(ExperimentalMaterial3Api::class)

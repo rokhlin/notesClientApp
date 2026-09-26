@@ -1,5 +1,6 @@
 rootProject.name = "notesClientApp"
 include(":composeApp")
+include(":common-models")
 
 pluginManagement {
     repositories {
