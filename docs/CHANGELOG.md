@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added accessible `PrimaryButton` with loading state and 48dp minimum touch target.
 - Implemented `ObsidianScaffold` multi-pane workspace layout (ADR Q6: strictly no tabs) with persistent 52dp `ObsidianRibbon`, animated `ObsidianSidebar` (Files, Tags, Bookmarks), and collapsible Outline & Metadata inspector.
 - Implemented floating `QuickSwitcherDialog` (`Ctrl/Cmd + O`) with real-time fuzzy search, keyboard navigation (`ArrowUp`/`ArrowDown`/`Enter`/`Esc`), and empty-query note creation action.
+- Implemented `MarkdownEngine` pluggable strategy architecture (ADR Q5) with `MarkdownEngineRegistry`, `AstMarkdownEngine` (fast CommonMark AST parsing), and `RichTextMarkdownEngine` (WYSIWYG live rendering with callouts and interactive checklists).
+- Added workspace engine selector control with live source edit / rendered view toggle.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.

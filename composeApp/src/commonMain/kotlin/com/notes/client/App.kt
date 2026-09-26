@@ -58,11 +58,16 @@ fun App() {
         var activeNote by remember { mutableStateOf<Note?>(notes.firstOrNull()) }
         var showAddDialog by remember { mutableStateOf(false) }
         var showSettingsDialog by remember { mutableStateOf(false) }
+        var activeEngineId by remember { mutableStateOf("ast-renderer") }
+        var isEditMode by remember { mutableStateOf(false) }
+        val currentEngine = remember(activeEngineId) { com.notes.client.editor.MarkdownEngineRegistry.getEngine(activeEngineId) }
 
         ObsidianScaffold(
             notes = notes,
             activeNote = activeNote,
             isDarkTheme = isDarkTheme,
+            activeEngineId = activeEngineId,
+            onEngineSelected = { activeEngineId = it },
             onNoteSelected = { note ->
                 activeNote = note
             },
@@ -112,41 +117,65 @@ fun App() {
                             }
                         }
                     } else {
-                        // Markdown Text Editor Canvas
-                        OutlinedTextField(
-                            value = currentNote.title,
-                            onValueChange = { newTitle ->
-                                val updated = currentNote.copy(title = newTitle)
-                                activeNote = updated
-                                notes = notes.map { if (it.id == updated.id) updated else it }
-                            },
-                            textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 12.dp),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                        // Markdown Text Editor Canvas with Pluggable Engine
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = currentNote.title,
+                                onValueChange = { newTitle ->
+                                    val updated = currentNote.copy(title = newTitle)
+                                    activeNote = updated
+                                    notes = notes.map { if (it.id == updated.id) updated else it }
+                                },
+                                textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                                )
                             )
-                        )
 
-                        OutlinedTextField(
-                            value = currentNote.content,
-                            onValueChange = { newContent ->
-                                val updated = currentNote.copy(content = newContent)
-                                activeNote = updated
-                                notes = notes.map { if (it.id == updated.id) updated else it }
-                            },
-                            textStyle = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                            // Edit / Preview toggle pill
+                            TextButton(
+                                onClick = { isEditMode = !isEditMode }
+                            ) {
+                                Text(
+                                    text = if (isEditMode) "👁️ View (${currentEngine.displayName})" else "✏️ Edit Source",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        if (isEditMode) {
+                            OutlinedTextField(
+                                value = currentNote.content,
+                                onValueChange = { newContent ->
+                                    val updated = currentNote.copy(content = newContent)
+                                    activeNote = updated
+                                    notes = notes.map { if (it.id == updated.id) updated else it }
+                                },
+                                textStyle = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                                )
                             )
-                        )
+                        } else {
+                            // Pluggable Engine Rendering
+                            currentEngine.Render(
+                                content = currentNote.content,
+                                modifier = Modifier.weight(1f),
+                                onLinkClick = { /* Handle link navigation */ }
+                            )
+                        }
                     }
                 }
             } else {

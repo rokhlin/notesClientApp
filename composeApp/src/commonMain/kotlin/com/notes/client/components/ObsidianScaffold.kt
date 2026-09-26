@@ -28,6 +28,8 @@ fun ObsidianScaffold(
     notes: List<Note>,
     activeNote: Note?,
     isDarkTheme: Boolean,
+    activeEngineId: String = "ast-renderer",
+    onEngineSelected: ((String) -> Unit)? = null,
     onNoteSelected: (Note) -> Unit,
     onCreateNote: (String) -> Unit,
     onToggleTheme: () -> Unit,
@@ -235,6 +237,46 @@ fun ObsidianScaffold(
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                    }
+                                }
+
+                                if (onEngineSelected != null && activeNote?.type == com.notes.common.models.NoteType.TEXT) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        )
+                                    ) {
+                                        Row(modifier = Modifier.padding(2.dp)) {
+                                            Surface(
+                                                modifier = Modifier.clickable { onEngineSelected("ast-renderer") },
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (activeEngineId == "ast-renderer") MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent
+                                            ) {
+                                                Text(
+                                                    text = "AST",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (activeEngineId == "ast-renderer") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                            Surface(
+                                                modifier = Modifier.clickable { onEngineSelected("richtext-wysiwyg") },
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (activeEngineId == "richtext-wysiwyg") MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent
+                                            ) {
+                                                Text(
+                                                    text = "WYSIWYG",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (activeEngineId == "richtext-wysiwyg") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
 
