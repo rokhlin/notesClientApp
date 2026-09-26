@@ -38,6 +38,7 @@ iosApp/*.moved-aside
 # Web / Node
 node_modules/
 .kotlin-js-store/
+kotlin-js-store/
 
 # OS specific
 .DS_Store
