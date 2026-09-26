@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import com.notes.client.canvas.instruments.BrushConfig
+import com.notes.client.canvas.shapes.ShapeRecognizer
 import com.notes.client.canvas.spline.CatmullRomConverter
 import com.notes.client.canvas.spline.StrokePoint
 import com.notes.common.models.CanvasLayer
@@ -39,6 +40,7 @@ fun SkiaHandwrittenCanvas(
     layers: List<CanvasLayer>,
     onLayersChange: (List<CanvasLayer>) -> Unit,
     currentBrush: BrushConfig,
+    autoSnap: Boolean = true,
     pageHeight: Float = 1200f
 ) {
     var scale by remember { mutableStateOf(1.0f) }
@@ -77,7 +79,7 @@ fun SkiaHandwrittenCanvas(
         modifier = modifier
             .fillMaxSize()
             .transformable(state = transformState)
-            .pointerInput(currentBrush, scale, offset) {
+            .pointerInput(currentBrush, scale, offset, autoSnap) {
                 detectDragGestures(
                     onDragStart = { startOffset ->
                         val localPoint = (startOffset - offset) / scale
@@ -109,6 +111,14 @@ fun SkiaHandwrittenCanvas(
                             // Perform vector eraser intersection
                             eraseIntersectingStrokes(activePoints.toList(), layers, onLayersChange, currentBrush.baseWidth)
                         } else if (activePoints.size >= 1) {
+                            // Recognize geometric shapes if autoSnap enabled and valid contour drawn
+                            val finalStrokePoints = if (autoSnap && activePoints.size >= 5) {
+                                val detected = ShapeRecognizer.recognize(activePoints.map { it.offset })
+                                detected?.toStrokePoints() ?: activePoints.toList()
+                            } else {
+                                activePoints.toList()
+                            }
+
                             // Append new stroke to active vector layer
                             val effectiveWidth = currentBrush.calculateEffectiveWidth(
                                 pressure = activePoints.lastOrNull()?.pressure ?: 0.5f
@@ -120,7 +130,7 @@ fun SkiaHandwrittenCanvas(
                                 colorHex = colorToHex(currentBrush.color),
                                 strokeWidth = effectiveWidth,
                                 opacity = currentBrush.alpha,
-                                points = activePoints.map { it.toInkPoint() }
+                                points = finalStrokePoints.map { it.toInkPoint() }
                             )
 
                             val updatedLayers = if (layers.isEmpty()) {

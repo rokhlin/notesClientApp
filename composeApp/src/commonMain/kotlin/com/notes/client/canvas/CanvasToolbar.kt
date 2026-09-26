@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.notes.client.canvas.instruments.BrushConfig
+import com.notes.client.canvas.shapes.RecognizedShapeType
 import com.notes.common.models.ToolType
 
 @Composable
@@ -26,8 +27,11 @@ fun CanvasToolbar(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onClear: () -> Unit,
+    onInsertShape: ((RecognizedShapeType) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var showShapesMenu by remember { mutableStateOf(false) }
+
     val quickColors = listOf(
         Color(0xFF0F172A),
         Color(0xFF4F46E5),
@@ -81,6 +85,58 @@ fun CanvasToolbar(
                 isSelected = currentBrush.toolType == ToolType.HIGHLIGHTER,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.HIGHLIGHTER, currentBrush.color, currentBrush.baseWidth)) }
             )
+
+            // Shape Insertion Tool
+            Box {
+                ToolButton(
+                    icon = "🔷",
+                    label = "Shapes",
+                    isSelected = showShapesMenu,
+                    onClick = { showShapesMenu = !showShapesMenu }
+                )
+
+                DropdownMenu(
+                    expanded = showShapesMenu,
+                    onDismissRequest = { showShapesMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("📏 Straight Line") },
+                        onClick = {
+                            showShapesMenu = false
+                            onInsertShape?.invoke(RecognizedShapeType.STRAIGHT_LINE)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("▭ Rectangle") },
+                        onClick = {
+                            showShapesMenu = false
+                            onInsertShape?.invoke(RecognizedShapeType.RECTANGLE)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("◯ Circle") },
+                        onClick = {
+                            showShapesMenu = false
+                            onInsertShape?.invoke(RecognizedShapeType.CIRCLE)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("⬭ Ellipse") },
+                        onClick = {
+                            showShapesMenu = false
+                            onInsertShape?.invoke(RecognizedShapeType.ELLIPSE)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("△ Triangle") },
+                        onClick = {
+                            showShapesMenu = false
+                            onInsertShape?.invoke(RecognizedShapeType.TRIANGLE)
+                        }
+                    )
+                }
+            }
+
             ToolButton(
                 icon = "🧹",
                 label = "Eraser",

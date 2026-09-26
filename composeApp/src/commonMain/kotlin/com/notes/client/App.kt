@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.notes.client.canvas.CanvasToolbar
 import com.notes.client.canvas.SkiaHandwrittenCanvas
 import com.notes.client.canvas.instruments.BrushConfig
+import com.notes.client.canvas.shapes.ShapeRecognizer
 import com.notes.client.components.ObsidianScaffold
 import com.notes.client.components.PrimaryButton
 import com.notes.client.editor.MarkdownEngineRegistry
@@ -231,6 +232,36 @@ fun App() {
                                         canvasRedoHistory = emptyList()
                                         val cleared = currentLayers.map { it.copy(strokes = emptyList()) }
                                         canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to cleared)
+                                    },
+                                    onInsertShape = { shapeType ->
+                                        val primitive = ShapeRecognizer.createDefaultPrimitive(
+                                            type = shapeType,
+                                            center = androidx.compose.ui.geometry.Offset(440f, 350f)
+                                        )
+                                        val strokePoints = primitive.toStrokePoints()
+                                        val newStroke = InkStroke(
+                                            id = "stroke_shape_${currentLayers.firstOrNull()?.strokes?.size ?: 0}",
+                                            tool = ToolType.PEN,
+                                            colorHex = "#4F46E5",
+                                            strokeWidth = canvasBrush.baseWidth,
+                                            points = strokePoints.map { it.toInkPoint() }
+                                        )
+                                        canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                        canvasRedoHistory = emptyList()
+                                        val updated = if (currentLayers.isEmpty()) {
+                                            listOf(
+                                                CanvasLayer(
+                                                    id = "layer_${currentNote.id}",
+                                                    name = "Main",
+                                                    strokes = listOf(newStroke)
+                                                )
+                                            )
+                                        } else {
+                                            currentLayers.mapIndexed { i, l ->
+                                                if (i == 0) l.copy(strokes = l.strokes + newStroke) else l
+                                            }
+                                        }
+                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to updated)
                                     },
                                     modifier = Modifier.align(Alignment.BottomCenter)
                                 )

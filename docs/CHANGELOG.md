@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built continuous vertical page roll `SkiaHandwrittenCanvas` with visual page break dividers, multi-layer cached path rendering, two-finger pan/zoom, and vector eraser hit-testing.
 - Built floating Samsung Notes inking `CanvasToolbar` with instrument switcher, color swatches, dynamic stroke width slider, and undo/redo/clear controls.
 - Embedded handwritten vector canvas directly into `App.kt` when opening `NoteType.CANVAS` notes.
+- Implemented `ShapeRecognizer` classifying geometric primitives (Straight Line, Rectangle, Circle, Ellipse, Triangle) with mathematical boundary, perimeter, and radial error variance algorithms.
+- Added 0.5s draw-and-hold auto-snapping to `SkiaHandwrittenCanvas`, automatically replacing rough contours with crisp canonical geometries.
+- Added Shapes Tool popup in `CanvasToolbar` enabling direct insertion of centered vector primitives into the active canvas layer.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.
