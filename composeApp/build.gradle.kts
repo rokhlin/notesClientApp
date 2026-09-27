@@ -30,6 +30,9 @@ kotlin {
         browser {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
+                devServer = (devServer ?: org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig.DevServer()).apply {
+                    port = 8081
+                }
             }
         }
         binaries.executable()
