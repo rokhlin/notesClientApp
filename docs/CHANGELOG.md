@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added comprehensive living system architecture document (`docs/system_architecture.md`) detailing multiplatform runtime topology, Skia inking and Bézier smoothing pipelines, E2EE vault crypto protocols, API integration contracts, and zero-SQL storage architecture.
 - Initial project structure for Compose Multiplatform client.
 - Implemented shared Kotlin Multiplatform `:common-models` module defining `Note`, `InkPoint`, `InkStroke`, `CanvasLayer`, `CmnManifest`, `NoteMetadata`, `NotesIndexCatalog`, and `SyncDTOs`.
 - Implemented Jetpack Navigation Compose Multiplatform routing with type-safe destinations (`NoteListRoute`, `NoteDetailRoute`, `CanvasRoute`, `SettingsRoute`).
