@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented `E2eeCryptoEngine` featuring authenticated AES-GCM-256 symmetric encryption, 12-byte IV, 16-byte MAC authentication tags, constant-time verification, and multi-round passphrase key derivation.
 - Implemented `Bip39RecoveryKit` generating 12-word mnemonic recovery phrases and deterministically deriving 256-bit root encryption keys (ADR Q15).
 - Built `VaultUnlockDialog` and protected note UI cards in `App.kt` enforcing client-side decryption barriers on encrypted notes.
+- Implemented `BiometricAuthManager` and `SimulatedBiometricAuthManager` multiplatform biometric adapter interface with hardware keystore/enclave simulation and secure key release.
+- Integrated quick biometric unlock action into `VaultUnlockDialog` with instantaneous biometric challenge authentication.
 - Note data models and basic UI screens.
 - GitHub Actions CI/CD workflows for PR validation, AI code review, and release automation.
 - Specialized subagent `canvas-specialist` for handwritten notes and Skia canvas engine.

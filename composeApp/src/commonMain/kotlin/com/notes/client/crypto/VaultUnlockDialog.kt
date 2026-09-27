@@ -11,10 +11,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.notes.client.biometrics.BiometricAuthManager
+import com.notes.client.biometrics.BiometricAuthResult
+import com.notes.client.biometrics.BiometricStatus
+import com.notes.client.biometrics.SimulatedBiometricAuthManager
 
 @Composable
 fun VaultUnlockDialog(
     noteTitle: String = "Vault",
+    biometricManager: BiometricAuthManager = remember { SimulatedBiometricAuthManager() },
     onDismiss: () -> Unit,
     onUnlocked: (ByteArray) -> Unit
 ) {
@@ -57,6 +62,34 @@ fun VaultUnlockDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                val canBio = remember(biometricManager) {
+                    biometricManager.canAuthenticate() == BiometricStatus.AVAILABLE && biometricManager.isBiometricEnabled()
+                }
+
+                if (canBio) {
+                    FilledTonalButton(
+                        onClick = {
+                            biometricManager.authenticate { result ->
+                                when (result) {
+                                    is BiometricAuthResult.Success -> {
+                                        onUnlocked(result.key)
+                                    }
+                                    is BiometricAuthResult.Failure -> {
+                                        errorMessage = result.reason
+                                    }
+                                    is BiometricAuthResult.Cancelled -> {
+                                        errorMessage = "Biometric authentication cancelled"
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("👆 Unlock with Biometrics (Touch ID / Face ID)")
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
 
                 TabRow(
                     selectedTabIndex = selectedTab,
