@@ -335,6 +335,7 @@ fun AiProviderSettingsView(
     val aiClientService = remember { DefaultAiClientService() }
     val coroutineScope = rememberCoroutineScope()
     val json = remember { Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true } }
+    val aiCatalog = remember { AiModelCatalog.defaultCatalog() }
 
     val currentConfig = providersMap[selectedProviderType] ?: AiProviderConfig(providerType = selectedProviderType)
 
@@ -456,12 +457,13 @@ fun AiProviderSettingsView(
 
                         // Primary Model Selection
                         Text("Primary Model:", style = MaterialTheme.typography.labelMedium)
+                        val geminiModels = aiCatalog.getModelsForProvider(AiProviderType.GEMINI)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.0-pro").forEach { model ->
+                            geminiModels.forEach { modelEntry ->
                                 FilterChip(
-                                    selected = currentConfig.primaryModelId == model,
-                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = model)) },
-                                    label = { Text(if (model == "gemini-3.5-flash") "$model (Recommended)" else model) }
+                                    selected = currentConfig.primaryModelId == modelEntry.id,
+                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = modelEntry.id)) },
+                                    label = { Text(if (modelEntry.isRecommended) "${modelEntry.displayName} (Recommended)" else modelEntry.displayName) }
                                 )
                             }
                         }
@@ -469,16 +471,18 @@ fun AiProviderSettingsView(
                         // Fallback Model Selection
                         Text("Failover Fallback Model:", style = MaterialTheme.typography.labelMedium)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("gemini-3.8-flash", "gemini-3.0-pro", "none").forEach { model ->
-                                val isSelected = if (model == "none") currentConfig.fallbackModelId == null else currentConfig.fallbackModelId == model
+                            geminiModels.forEach { modelEntry ->
                                 FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        updateCurrentConfig(currentConfig.copy(fallbackModelId = if (model == "none") null else model))
-                                    },
-                                    label = { Text(if (model == "gemini-3.8-flash") "$model (Recommended Fallback)" else model) }
+                                    selected = currentConfig.fallbackModelId == modelEntry.id,
+                                    onClick = { updateCurrentConfig(currentConfig.copy(fallbackModelId = modelEntry.id)) },
+                                    label = { Text(if (modelEntry.tier == AiModelTier.FALLBACK) "${modelEntry.displayName} (Fallback)" else modelEntry.displayName) }
                                 )
                             }
+                            FilterChip(
+                                selected = currentConfig.fallbackModelId == null,
+                                onClick = { updateCurrentConfig(currentConfig.copy(fallbackModelId = null)) },
+                                label = { Text("None") }
+                            )
                         }
 
                         Row(
@@ -514,12 +518,13 @@ fun AiProviderSettingsView(
                         )
 
                         Text("Primary Model:", style = MaterialTheme.typography.labelMedium)
+                        val openAiModels = aiCatalog.getModelsForProvider(AiProviderType.OPENAI)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("gpt-4o-mini", "gpt-4o", "o3-mini").forEach { model ->
+                            openAiModels.forEach { modelEntry ->
                                 FilterChip(
-                                    selected = currentConfig.primaryModelId == model,
-                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = model)) },
-                                    label = { Text(if (model == "gpt-4o-mini") "$model (Recommended)" else model) }
+                                    selected = currentConfig.primaryModelId == modelEntry.id,
+                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = modelEntry.id)) },
+                                    label = { Text(if (modelEntry.isRecommended) "${modelEntry.displayName} (Recommended)" else modelEntry.displayName) }
                                 )
                             }
                         }
@@ -550,12 +555,13 @@ fun AiProviderSettingsView(
                         )
 
                         Text("Primary Model:", style = MaterialTheme.typography.labelMedium)
+                        val anthropicModels = aiCatalog.getModelsForProvider(AiProviderType.ANTHROPIC)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("claude-3-5-haiku-20241022", "claude-3-7-sonnet", "claude-3-5-sonnet").forEach { model ->
+                            anthropicModels.forEach { modelEntry ->
                                 FilterChip(
-                                    selected = currentConfig.primaryModelId == model,
-                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = model)) },
-                                    label = { Text(if (model.contains("haiku")) "Claude 3.5 Haiku (Fast)" else model) }
+                                    selected = currentConfig.primaryModelId == modelEntry.id,
+                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = modelEntry.id)) },
+                                    label = { Text(if (modelEntry.isRecommended) "${modelEntry.displayName} (Recommended)" else modelEntry.displayName) }
                                 )
                             }
                         }
@@ -631,13 +637,14 @@ fun AiProviderSettingsView(
                         }
 
                         // Model Presets
-                        Text("Model Presets / Configured:", style = MaterialTheme.typography.labelMedium)
+                        Text("Model Presets / Catalog:", style = MaterialTheme.typography.labelMedium)
+                        val localModels = aiCatalog.getModelsForProvider(AiProviderType.LOCAL_SERVER)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("llama3.3", "qwen2.5", "mistral", "deepseek-r1").forEach { model ->
+                            localModels.forEach { modelEntry ->
                                 FilterChip(
-                                    selected = currentConfig.primaryModelId == model,
-                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = model)) },
-                                    label = { Text(model) }
+                                    selected = currentConfig.primaryModelId == modelEntry.id,
+                                    onClick = { updateCurrentConfig(currentConfig.copy(primaryModelId = modelEntry.id)) },
+                                    label = { Text(modelEntry.displayName) }
                                 )
                             }
                         }

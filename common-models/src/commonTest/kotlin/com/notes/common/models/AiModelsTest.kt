@@ -118,4 +118,103 @@ class AiModelsTest {
         val failDeserialized = json.decodeFromString<ConnectionTestResult>(failSerialized)
         assertEquals(failResult, failDeserialized)
     }
+
+    @Test
+    fun testAiModelCatalogDefaultLoading() {
+        val catalog = AiModelCatalog.defaultCatalog()
+        assertEquals("1.0.0", catalog.schemaVersion)
+        assertEquals("1.0.0", catalog.catalogVersion)
+        assertEquals(4, catalog.providers.size)
+
+        // Gemini
+        val geminiModels = catalog.getModelsForProvider(AiProviderType.GEMINI)
+        assertTrue(geminiModels.isNotEmpty())
+        assertEquals("gemini-3.5-flash", catalog.getPrimaryModel(AiProviderType.GEMINI))
+        assertEquals("gemini-3.8-flash", catalog.getFallbackModel(AiProviderType.GEMINI))
+        assertTrue(geminiModels.any { it.id == "gemini-3.5-flash" && it.isRecommended })
+
+        // OpenAI
+        val openAiModels = catalog.getModelsForProvider(AiProviderType.OPENAI)
+        assertEquals("gpt-4o-mini", catalog.getPrimaryModel(AiProviderType.OPENAI))
+        assertEquals("gpt-4o", catalog.getFallbackModel(AiProviderType.OPENAI))
+
+        // Anthropic
+        assertEquals("claude-3-5-haiku-20241022", catalog.getPrimaryModel(AiProviderType.ANTHROPIC))
+        assertEquals("claude-3-7-sonnet", catalog.getFallbackModel(AiProviderType.ANTHROPIC))
+
+        // Local Server
+        assertEquals("llama3.3", catalog.getPrimaryModel(AiProviderType.LOCAL_SERVER))
+        assertEquals("llama3.2", catalog.getFallbackModel(AiProviderType.LOCAL_SERVER))
+    }
+
+    @Test
+    fun testAiModelCatalogCustomJsonParsingAndFiltering() {
+        val customJson = """{
+            "schemaVersion": "1.1.0",
+            "catalogVersion": "2.0.0",
+            "updatedAt": "2026-10-01T00:00:00Z",
+            "providers": {
+                "GEMINI": {
+                    "provider": "GEMINI",
+                    "baseUrl": "https://custom.gemini.proxy",
+                    "defaultPrimaryModelId": "gemini-4.0-flash",
+                    "defaultFallbackModelId": "gemini-3.8-flash",
+                    "models": [
+                        {"id": "gemini-4.0-flash", "displayName": "Gemini 4.0 Flash", "tier": "PRIMARY", "isRecommended": true, "status": "ACTIVE"},
+                        {"id": "gemini-3.8-flash", "displayName": "Gemini 3.8 Flash", "tier": "FALLBACK", "isRecommended": true, "status": "ACTIVE"},
+                        {"id": "gemini-2.5-flash", "displayName": "Gemini 2.5 Flash (Legacy)", "tier": "FAST", "status": "SUNSET"}
+                    ]
+                }
+            }
+        }"""
+
+        val catalog = AiModelCatalog.loadFromJson(customJson)
+        assertEquals("2.0.0", catalog.catalogVersion)
+        assertEquals("gemini-4.0-flash", catalog.getPrimaryModel(AiProviderType.GEMINI))
+
+        val models = catalog.getModelsForProvider(AiProviderType.GEMINI)
+        // Ensure SUNSET model gemini-2.5-flash is filtered out
+        assertEquals(2, models.size)
+        assertTrue(models.none { it.id == "gemini-2.5-flash" })
+        assertTrue(models.any { it.id == "gemini-4.0-flash" })
+    }
+
+    @Test
+    fun testAiModelCatalogCorruptedJsonGracefulFallback() {
+        val malformedJson = "{ this is not valid json content [ {"
+        val catalog = AiModelCatalog.loadFromJson(malformedJson)
+
+        // Must not throw exception, must return default catalog
+        assertNotNull(catalog)
+        assertEquals("gemini-3.5-flash", catalog.getPrimaryModel(AiProviderType.GEMINI))
+        assertTrue(catalog.getModelsForProvider(AiProviderType.GEMINI).isNotEmpty())
+
+        val emptyCatalog = AiModelCatalog.loadFromJson("")
+        assertNotNull(emptyCatalog)
+        assertEquals("gemini-3.5-flash", emptyCatalog.getPrimaryModel(AiProviderType.GEMINI))
+    }
+
+    @Test
+    fun testAiSettingsConfigWithCustomCatalog() {
+        val customJson = """{
+            "catalogVersion": "3.0.0",
+            "providers": {
+                "GEMINI": {
+                    "provider": "GEMINI",
+                    "baseUrl": "https://custom.gemini",
+                    "defaultPrimaryModelId": "gemini-future-flash",
+                    "defaultFallbackModelId": "gemini-future-pro"
+                }
+            }
+        }"""
+        val customCatalog = AiModelCatalog.loadFromJson(customJson)
+        val defaultProviders = AiSettingsConfig.defaultProviders(customCatalog)
+
+        val gemini = defaultProviders[AiProviderType.GEMINI]
+        assertNotNull(gemini)
+        assertEquals("gemini-future-flash", gemini.primaryModelId)
+        assertEquals("gemini-future-pro", gemini.fallbackModelId)
+        assertEquals("https://custom.gemini", gemini.baseUrl)
+    }
 }
+
