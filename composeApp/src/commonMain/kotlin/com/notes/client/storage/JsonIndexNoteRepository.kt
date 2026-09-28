@@ -118,6 +118,7 @@ class JsonIndexNoteRepository(
             tags = note.tags,
             type = note.type,
             isEncrypted = note.isEncrypted,
+            isProtected = note.isProtected,
             updatedAt = updatedAt,
             sizeBytes = sizeBytes
         )

@@ -31,6 +31,12 @@ import com.notes.client.editor.WikilinkParser
 import com.notes.client.storage.JsonIndexNoteRepository
 import com.notes.client.storage.StorageVaultDialog
 import com.notes.client.theme.NotesTheme
+import com.notes.client.auth.AuthManager
+import com.notes.client.auth.LoginRequiredDialog
+import com.notes.client.components.SettingsDialog
+import com.notes.client.crypto.ProtectedNoteBarrier
+import com.notes.client.storage.DeviceSettingsDriver
+import com.notes.common.crypto.ProtectedNoteCodec
 import com.notes.common.models.CanvasLayer
 import com.notes.common.models.InkPoint
 import com.notes.common.models.InkStroke
@@ -73,20 +79,34 @@ fun App() {
                     ),
                     Note(
                         id = "4",
+                        title = "Security & Storage Manifest",
+                        content = "# Security & Storage Manifest\n\n- Individual Note Password Protection (Self-Contained .nap Container)\n- Unified R2 Cloud Storage with per-tenant users/{userId}/ isolation\n- API request authentication with userApiKey + HMAC-SHA256 signature\n- Two-tier configuration: UserCloudConfig (synced) & DeviceLocalModuleConfig (hardware)",
+                        type = NoteType.TEXT,
+                        tags = listOf("security", "protected", "starred"),
+                        isProtected = true,
+                        createdAt = 1717030000000L
+                    ),
+                    Note(
+                        id = "5",
                         title = "E2EE Master Key Vault Spec",
                         content = "# E2EE Master Key Vault Spec\n\n- Zero-Knowledge client-side authenticated encryption (AES-GCM-256)\n- Non-custodial 12-word BIP-39 recovery mnemonic seed phrase\n- Constant-time MAC authentication tag verification",
                         type = NoteType.TEXT,
-                        tags = listOf("security", "crypto", "starred"),
+                        tags = listOf("security", "crypto"),
                         isEncrypted = true,
-                        createdAt = 1717030000000L
+                        createdAt = 1717035000000L
                     )
                 )
             )
         }
 
+        val authManager = remember { AuthManager() }
+        val deviceSettingsDriver = remember { DeviceSettingsDriver() }
+        var showLoginRequiredDialog by remember { mutableStateOf(false) }
+        var showSettingsDialog by remember { mutableStateOf(false) }
+        var unlockedNoteIds by remember { mutableStateOf(setOf<String>()) }
+
         var activeNote by remember { mutableStateOf<Note?>(notes.firstOrNull()) }
         var showAddDialog by remember { mutableStateOf(false) }
-        var showSettingsDialog by remember { mutableStateOf(false) }
         var activeEngineId by remember { mutableStateOf("ast-renderer") }
         var isEditMode by remember { mutableStateOf(false) }
         var unresolvedLinkTarget by remember { mutableStateOf<String?>(null) }
@@ -170,7 +190,13 @@ fun App() {
                 activeNote = newNote
             },
             onToggleTheme = { isDarkTheme = !isDarkTheme },
-            onOpenSettings = { showSettingsDialog = true }
+            onOpenSettings = {
+                if (authManager.isAuthenticated) {
+                    showSettingsDialog = true
+                } else {
+                    showLoginRequiredDialog = true
+                }
+            }
         ) { currentNote ->
             if (currentNote != null) {
                 // Unified Workspace Canvas (NO TABS) - Single Document Focus
@@ -333,6 +359,28 @@ fun App() {
                                 )
                             )
 
+                            if (currentNote.isProtected) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val isUnlocked = unlockedNoteIds.contains(currentNote.id)
+                                AssistChip(
+                                    onClick = {
+                                        if (isUnlocked) {
+                                            unlockedNoteIds = unlockedNoteIds - currentNote.id
+                                        }
+                                    },
+                                    label = { Text(if (isUnlocked) "🔒 Re-Lock" else "🛡️ Protected") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                                        labelColor = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                AssistChip(
+                                    onClick = {},
+                                    label = { Text("⚡ No Collab") }
+                                )
+                            }
+
                             if (currentNote.isEncrypted) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 AssistChip(
@@ -350,7 +398,7 @@ fun App() {
                             // Edit / Preview toggle pill
                             TextButton(
                                 onClick = { isEditMode = !isEditMode },
-                                enabled = !currentNote.isEncrypted || isVaultUnlocked
+                                enabled = (!currentNote.isEncrypted || isVaultUnlocked) && (!currentNote.isProtected || unlockedNoteIds.contains(currentNote.id))
                             ) {
                                 Text(
                                     text = if (isEditMode) "👁️ View (${currentEngine.displayName})" else "✏️ Edit Source",
@@ -360,7 +408,20 @@ fun App() {
                             }
                         }
 
-                        if (currentNote.isEncrypted && !isVaultUnlocked) {
+                        if (currentNote.isProtected && !unlockedNoteIds.contains(currentNote.id)) {
+                            val sampleSalt = "aabbccddeeff00112233445566778899"
+                            val sampleCheckTag = remember { ProtectedNoteCodec.deriveCheckTag("secret123", sampleSalt) }
+
+                            ProtectedNoteBarrier(
+                                note = currentNote,
+                                passwordHint = "Default demo password: 'secret123'",
+                                expectedCheckTagHex = sampleCheckTag,
+                                saltHex = sampleSalt,
+                                onUnlocked = {
+                                    unlockedNoteIds = unlockedNoteIds + currentNote.id
+                                }
+                            )
+                        } else if (currentNote.isEncrypted && !isVaultUnlocked) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -542,41 +603,23 @@ fun App() {
             )
         }
 
-        if (showSettingsDialog) {
-            AlertDialog(
-                onDismissRequest = { showSettingsDialog = false },
-                title = { Text("Settings & Vault") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Dark Theme", style = MaterialTheme.typography.bodyMedium)
-                            Switch(
-                                checked = isDarkTheme,
-                                onCheckedChange = { isDarkTheme = it }
-                            )
-                        }
-                        FilledTonalButton(
-                            onClick = { showStorageDialog = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("🗄️ Inspect Sandboxed Vault & Index")
-                        }
-                        Text(
-                            "NotesAlltogether v1.0.0 (Compose Multiplatform)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showSettingsDialog = false }) {
-                        Text("Close")
-                    }
+        if (showLoginRequiredDialog) {
+            LoginRequiredDialog(
+                authManager = authManager,
+                onDismiss = { showLoginRequiredDialog = false },
+                onSuccess = {
+                    showLoginRequiredDialog = false
+                    showSettingsDialog = true
                 }
+            )
+        }
+
+        if (showSettingsDialog) {
+            SettingsDialog(
+                authManager = authManager,
+                deviceSettingsDriver = deviceSettingsDriver,
+                onOpenStorageVault = { showStorageDialog = true },
+                onDismiss = { showSettingsDialog = false }
             )
         }
 
