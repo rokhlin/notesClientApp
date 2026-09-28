@@ -37,13 +37,21 @@ import com.notes.client.components.SettingsDialog
 import com.notes.client.crypto.ProtectedNoteBarrier
 import com.notes.client.storage.DeviceSettingsDriver
 import com.notes.common.crypto.ProtectedNoteCodec
+import com.notes.client.ai.AiClientService
+import com.notes.client.ai.DefaultAiClientService
+import com.notes.client.components.SmartMetadataDialog
+import com.notes.common.models.AiMetadataRequest
+import com.notes.common.models.AiProviderConfig
+import com.notes.common.models.AiProviderType
 import com.notes.common.models.CanvasLayer
 import com.notes.common.models.InkPoint
 import com.notes.common.models.InkStroke
 import com.notes.common.models.LayerType
 import com.notes.common.models.Note
+import com.notes.common.models.NoteMetadataFill
 import com.notes.common.models.NoteType
 import com.notes.common.models.ToolType
+import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
@@ -163,6 +171,65 @@ fun App() {
             } ?: emptyList()
         }
 
+        val aiClientService = remember { DefaultAiClientService() }
+        val coroutineScope = rememberCoroutineScope()
+        var showSmartMetadataDialog by remember { mutableStateOf(false) }
+        var activeMetadataFill by remember { mutableStateOf<NoteMetadataFill?>(null) }
+        var isAiLoading by remember { mutableStateOf(false) }
+        var aiErrorMessage by remember { mutableStateOf<String?>(null) }
+        var showAiErrorDialog by remember { mutableStateOf(false) }
+        var showPrivacyWarningDialog by remember { mutableStateOf(false) }
+        var privacyWarningPendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+        fun executeAiMetadataFill(note: Note) {
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            val providerConfig = aiSettings.providers[aiSettings.activeProvider] ?: AiProviderConfig(providerType = aiSettings.activeProvider)
+            isAiLoading = true
+            coroutineScope.launch {
+                val request = AiMetadataRequest(
+                    noteId = note.id,
+                    title = note.title,
+                    content = note.content,
+                    existingTags = note.tags,
+                    maxTags = aiSettings.maxTagsToGenerate
+                )
+                val result = aiClientService.fillMetadata(request, providerConfig)
+                isAiLoading = false
+                result.fold(
+                    onSuccess = { fill ->
+                        activeMetadataFill = fill
+                        showSmartMetadataDialog = true
+                    },
+                    onFailure = { error ->
+                        aiErrorMessage = error.message ?: "Failed to generate metadata"
+                        showAiErrorDialog = true
+                    }
+                )
+            }
+        }
+
+        fun triggerAiMetadata() {
+            val note = activeNote ?: return
+            if (note.isProtected && !unlockedNoteIds.contains(note.id)) {
+                aiErrorMessage = "This note is password-protected. Please unlock it before requesting AI metadata."
+                showAiErrorDialog = true
+                return
+            }
+            if (note.isEncrypted && !isVaultUnlocked) {
+                aiErrorMessage = "This note is encrypted. Please unlock your vault before requesting AI metadata."
+                showAiErrorDialog = true
+                return
+            }
+
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            if (aiSettings.activeProvider != AiProviderType.LOCAL_SERVER && (note.isProtected || note.isEncrypted)) {
+                privacyWarningPendingAction = { executeAiMetadataFill(note) }
+                showPrivacyWarningDialog = true
+            } else {
+                executeAiMetadataFill(note)
+            }
+        }
+
         ObsidianScaffold(
             notes = notes,
             activeNote = activeNote,
@@ -196,7 +263,8 @@ fun App() {
                 } else {
                     showLoginRequiredDialog = true
                 }
-            }
+            },
+            onTriggerAiMetadata = { triggerAiMetadata() }
         ) { currentNote ->
             if (currentNote != null) {
                 // Unified Workspace Canvas (NO TABS) - Single Document Focus
@@ -239,6 +307,15 @@ fun App() {
                                     colors = AssistChipDefaults.assistChipColors(
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                                         labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                AssistChip(
+                                    onClick = { triggerAiMetadata() },
+                                    label = { Text("✨ AI Metadata") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -394,6 +471,15 @@ fun App() {
                                     label = { Text(if (isVaultUnlocked) "🔓 Vault Unlocked" else "🔒 Encrypted Note") }
                                 )
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            AssistChip(
+                                onClick = { triggerAiMetadata() },
+                                label = { Text("✨ AI Metadata") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             // Edit / Preview toggle pill
                             TextButton(
@@ -637,6 +723,114 @@ fun App() {
                 onUnlocked = {
                     isVaultUnlocked = true
                     showUnlockVaultDialog = false
+                }
+            )
+        }
+
+        if (showSmartMetadataDialog && activeMetadataFill != null && activeNote != null) {
+            val noteToUpdate = activeNote!!
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            SmartMetadataDialog(
+                initialFill = activeMetadataFill!!,
+                currentTitle = noteToUpdate.title,
+                existingTags = noteToUpdate.tags,
+                activeProviderName = when (aiSettings.activeProvider) {
+                    AiProviderType.GEMINI -> "Google Gemini"
+                    AiProviderType.OPENAI -> "OpenAI"
+                    AiProviderType.ANTHROPIC -> "Anthropic Claude"
+                    AiProviderType.LOCAL_SERVER -> "Local LLM Server"
+                },
+                onApply = { newTitle, tagsToAdd, summaryToInsert ->
+                    val updatedTitle = if (!newTitle.isNullOrBlank()) newTitle else noteToUpdate.title
+                    val updatedTags = (noteToUpdate.tags + tagsToAdd).distinct()
+                    val updatedContent = if (!summaryToInsert.isNullOrBlank()) {
+                        "> **Summary:** $summaryToInsert\n\n${noteToUpdate.content}"
+                    } else {
+                        noteToUpdate.content
+                    }
+                    val updatedNote = noteToUpdate.copy(
+                        title = updatedTitle,
+                        tags = updatedTags,
+                        content = updatedContent
+                    )
+                    storageRepository.saveNote(updatedNote)
+                    notes = notes.map { if (it.id == updatedNote.id) updatedNote else it }
+                    activeNote = updatedNote
+                    showSmartMetadataDialog = false
+                    activeMetadataFill = null
+                },
+                onDismiss = {
+                    showSmartMetadataDialog = false
+                    activeMetadataFill = null
+                }
+            )
+        }
+
+        if (isAiLoading) {
+            val aiSettings = remember { deviceSettingsDriver.getAiSettingsConfig() }
+            AlertDialog(
+                onDismissRequest = { /* Modal in-progress */ },
+                confirmButton = {},
+                title = { Text("✨ Analyzing Note Context") },
+                text = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Column {
+                            Text("Querying ${aiSettings.activeProvider.name}...", style = MaterialTheme.typography.bodyMedium)
+                            Text("Generating smart tags, summary, and title...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showAiErrorDialog) {
+            AlertDialog(
+                onDismissRequest = { showAiErrorDialog = false },
+                title = { Text("AI Metadata Suggestion") },
+                text = {
+                    Text(aiErrorMessage ?: "An unexpected error occurred while analyzing note context.")
+                },
+                confirmButton = {
+                    Button(onClick = { showAiErrorDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
+        if (showPrivacyWarningDialog) {
+            val aiSettings = remember { deviceSettingsDriver.getAiSettingsConfig() }
+            AlertDialog(
+                onDismissRequest = {
+                    showPrivacyWarningDialog = false
+                    privacyWarningPendingAction = null
+                },
+                title = { Text("🛡️ Privacy & Confidentiality Notice") },
+                text = {
+                    Text("This note is designated as protected or encrypted. Requesting AI suggestions will transmit the sanitized note context to the external cloud provider (${aiSettings.activeProvider.name}).\n\nDo you want to proceed with transmission?")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        showPrivacyWarningDialog = false
+                        val action = privacyWarningPendingAction
+                        privacyWarningPendingAction = null
+                        action?.invoke()
+                    }) {
+                        Text("Proceed & Analyze")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showPrivacyWarningDialog = false
+                        privacyWarningPendingAction = null
+                    }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

@@ -1,5 +1,6 @@
 package com.notes.client.storage
 
+import com.notes.common.models.AiSettingsConfig
 import com.notes.common.models.DeviceLocalModuleConfig
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
@@ -44,6 +45,23 @@ class DeviceSettingsDriver(
         cachedConfigs[config.moduleId] = updated
         val path = moduleConfigPath(config.moduleId)
         val text = json.encodeToString(DeviceLocalModuleConfig.serializer(), updated)
+        storageDriver.writeText(path, text)
+    }
+
+    fun getAiSettingsConfig(): AiSettingsConfig {
+        val path = "device_modules/ai_settings.json"
+        val text = storageDriver.readText(path)
+        if (!text.isNullOrBlank()) {
+            return runCatching {
+                json.decodeFromString(AiSettingsConfig.serializer(), text)
+            }.getOrElse { AiSettingsConfig() }
+        }
+        return AiSettingsConfig()
+    }
+
+    fun saveAiSettingsConfig(config: AiSettingsConfig) {
+        val path = "device_modules/ai_settings.json"
+        val text = json.encodeToString(AiSettingsConfig.serializer(), config)
         storageDriver.writeText(path, text)
     }
 
