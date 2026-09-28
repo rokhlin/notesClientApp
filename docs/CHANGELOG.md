@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Implemented Multi-Provider AI Connectivity (`AiClientService`) supporting Google Gemini (with `gemini-3.5-flash` primary and automated failover to `gemini-3.8-flash`), OpenAI (`gpt-4o-mini`), Anthropic Claude (`claude-3-5-haiku-20241022`), and Local LLM Servers (Ollama native & OpenAI-compatible).
+- Added Dynamic Local Model Discovery querying `/api/tags` and `/v1/models` on local server endpoints to auto-populate installed LLM model selectors.
+- Added live Connection Test diagnostic tool (`testConnection`) measuring ping latency and verifying authentication credentials with real-time status pills.
+- Added Tab 2 ("🤖 AI Providers") to `SettingsDialog` with password-masked API keys, eye reveal toggles, model chip pickers, and dual local/cloud persistence.
+- Implemented `SmartMetadataDialog` review modal with interactive tag selection chips, suggested title toggle, document executive summary checkbox, and wikilink detection chips.
+- Added dual-entry metadata triggers via Editor top bar (`[✨ AI Metadata]`) and Right Sidebar Document Properties (`[✨ Auto-Fill Metadata]`).
+- Implemented Privacy Shield guard verifying protected/encrypted note status and requiring explicit confirmation dialog before transmitting sensitive note context to cloud providers.
+- Implemented `ContextTruncator` (32,000 character limit preserving document headings) and resilient `JsonSanitizer` with regex extraction fallback.
+- Added comprehensive unit test suite `AiServiceTest` and `AiModelsTest` covering all provider engines, Gemini failover, and Ollama discovery with 100% pass rate.
 - Implemented `AuthManager` reactive session management and state holder for user credentials, tokens, and per-user API key/signing secret.
 - Added `LoginRequiredDialog` modal gating barrier preventing unauthorized access to system settings, storage paths, and cloud synchronization profiles.
 - Implemented `SettingsDialog` two-tier configuration management separating Tier 1 User Cloud Profile & Storage Paths from Tier 2 Device Hardware Settings.

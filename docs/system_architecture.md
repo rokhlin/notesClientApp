@@ -17,6 +17,7 @@ notesClientApp/
 │   └── src/commonMain/kotlin/com/notes/common/models/
 ├── composeApp/              # Compose Multiplatform UI, state machines & client engines
 │   ├── src/commonMain/kotlin/com/notes/client/
+│   │   ├── ai/              # Multi-provider AI services, context truncator, prompt builder, sanitizer
 │   │   ├── biometrics/      # Biometric authentication adapters & enclave integration
 │   │   ├── canvas/          # Skia vector canvas, smoothing, brushes, shapes & .cmn codecs
 │   │   ├── components/      # Material 3 shared UI components & dialogs
@@ -149,6 +150,43 @@ sequenceDiagram
         Crypto-->>Dialog: CryptoException("Authentication tag mismatch")
         Dialog-->>User: Display error & keep payload encrypted
     end
+```
+
+### 2.4. Contextual AI Smart Metadata Analysis Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Editor as Workspace Editor / Scaffold
+    participant Guard as Privacy Shield Guard
+    participant Service as AiClientService
+    participant Trunc as ContextTruncator
+    participant Transport as HttpTransport
+    participant LLM as AI Provider (Gemini / OpenAI / Claude / Local)
+    participant Dialog as SmartMetadataDialog
+    participant Repo as NoteRepository
+
+    User->>Editor: Click [✨ AI Metadata]
+    Editor->>Guard: Verify note protection / encryption state
+    alt Protected / Encrypted & Cloud Provider
+        Guard->>User: Display Privacy Warning Confirmation Modal
+        User->>Guard: Click [Proceed & Analyze]
+    end
+    Guard->>Trunc: Truncate note content (max 32k chars, keep headings)
+    Trunc-->>Service: Sanitized context
+    Service->>Transport: POST prompt payload to active provider
+    Transport->>LLM: Dispatches HTTP request
+    alt Primary Provider 404 / 410 / 429 & Failover Enabled
+        LLM-->>Transport: Error status code
+        Transport->>LLM: Fallback model dispatch (e.g. Gemini 3.8 Flash)
+    end
+    LLM-->>Transport: Raw AI response
+    Transport-->>Service: HTTP response text
+    Service->>Service: Sanitize & parse NoteMetadataFill
+    Service-->>Dialog: Display suggestions (title, tags, summary, wikilinks)
+    User->>Dialog: Toggle selected tags / title / summary
+    User->>Dialog: Click [Apply Selected Metadata]
+    Dialog->>Repo: Atomically save updated note
 ```
 
 ---
@@ -339,6 +377,18 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **`DeviceSettingsDriver`**:
   - Manages physical device runtime settings (`DeviceLocalModuleConfig`), including Skia GPU hardware acceleration, stylus pressure sensitivity curve, and local disk cache directories.
   - Persisted strictly to physical device filesystem (`device_modules/module_{id}.json`), completely decoupled from cloud synchronization.
+  - Manages offline local persistence for AI provider configurations (`device_modules/ai_settings.json`).
+
+### 4.7. Contextual AI Subsystem (`com.notes.client.ai`)
+- **`AiClientService`**:
+  - Unified multiplatform AI client executing metadata filling and connection diagnostics across Google Gemini, OpenAI, Anthropic Claude, and Local Server LLMs.
+  - Implements automatic model failover (e.g. `gemini-3.5-flash` $\to$ `gemini-3.8-flash` on HTTP 404/410/429) and dynamic model discovery via `/api/tags` and `/v1/models`.
+- **`ContextTruncator`**:
+  - Binds note content to a hard 32,000-character limit, extracting and preserving markdown heading outlines (H1–H6) to maintain document structure while discarding verbose canvas coordinate strokes.
+- **`PromptBuilder`**:
+  - Constructs structured system and user prompts enforcing valid `NoteMetadataFill` JSON schemas while passing existing note tags to eliminate duplicate generation.
+- **`JsonSanitizer`**:
+  - Strips markdown code fences (````json ... ````), extracts bracketed JSON substrings, normalizes tags to lowercase/kebab-case, and provides regex tag extraction fallback.
 
 ---
 
@@ -370,6 +420,11 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **API Request Authentication**: Client-server API requests carry `X-User-Key`, `X-Timestamp`, `X-Nonce`, and `X-Signature`, validated against the user's private `signingSecret`.
 - **R2 Tenant Isolation**: All remote objects in Cloudflare R2 are namespaced under `users/{userId}/*`. The server validates that pre-signed URL requests cannot reference keys outside the caller's tenant boundary, returning HTTP 403 on cross-tenant attempts.
 
+### 5.6. AI Privacy Shield & Local Execution
+- **Privacy Shield Guard**: Analyzes the security state of notes before context generation. If `isProtected` or `isEncrypted` is true, AI analysis is completely blocked while locked. When unlocked, any request directed to an external cloud provider (Google Gemini, OpenAI, Anthropic Claude) triggers an explicit Privacy Notice modal requiring affirmative user confirmation before sending note context over the network.
+- **Zero Cloud Egress for Local LLMs**: When configured with `LOCAL_SERVER` (Ollama or OpenAI-compatible local server), all HTTP requests are dispatched exclusively to the user-specified localhost/LAN endpoint (`http://localhost:11434`), guaranteeing complete privacy with zero external transmission.
+- **Credential Masking & Security**: API keys are rendered with `PasswordVisualTransformation` with eye toggles, saved locally in `DeviceSettingsDriver` hardware storage, and never output in plaintext log files.
+
 ---
 
 ## 6. Feature Toggles & Pluggable Engine Architecture
@@ -383,6 +438,8 @@ To allow flexible customization without rebuilding, the client implements plugga
 | **Shape Auto-Snapping**| Enabled (0.5s hold) / Disabled | Enabled | `CanvasToolbar` / Settings |
 | **Workspace Layout** | Zero-tab Obsidian-style (Ribbon + Sidebar + Inspector) | Enforced (ADR Q6) | `ObsidianScaffold` |
 | **Storage Engine** | Zero-SQL Sandboxed JSON / .cmn | Enforced (ADR Q19) | `NoteStorageRepository` |
+| **AI Active Provider** | `GEMINI`, `OPENAI`, `ANTHROPIC`, `LOCAL_SERVER` | `GEMINI` | `AiSettingsConfig` |
+| **Local AI Protocol** | `OLLAMA_NATIVE`, `OPENAI_COMPATIBLE` | `OLLAMA_NATIVE` | `AiProviderConfig` |
 
 ---
 
@@ -458,6 +515,49 @@ Offset (Bytes)   Length          Field Content
 0x08             N Bytes         Manifest JSON (UTF-8 Encoded Schema)
 0x08 + N         4 Bytes         Layer Payload Count (UInt32)
 ...              M Bytes         Binary Layer & Stroke Coordinate Arrays
+```
+
+### 7.3. AI Provider & Metadata Data Contracts (`:common-models`)
+```kotlin
+enum class AiProviderType { GEMINI, OPENAI, ANTHROPIC, LOCAL_SERVER }
+enum class LocalAiProtocol { OPENAI_COMPATIBLE, OLLAMA_NATIVE }
+
+@Serializable
+data class AiProviderConfig(
+    val providerType: AiProviderType = AiProviderType.GEMINI,
+    val apiKey: String = "",
+    val primaryModelId: String = "gemini-3.5-flash",
+    val fallbackModelId: String? = "gemini-3.8-flash",
+    val isFallbackEnabled: Boolean = true,
+    val baseUrl: String = "https://generativelanguage.googleapis.com",
+    val isEnabled: Boolean = true,
+    val localProtocol: LocalAiProtocol = LocalAiProtocol.OPENAI_COMPATIBLE
+)
+
+@Serializable
+data class AiSettingsConfig(
+    val activeProvider: AiProviderType = AiProviderType.GEMINI,
+    val providers: Map<AiProviderType, AiProviderConfig> = defaultProviders(),
+    val autoSuggestOnNoteCreation: Boolean = false,
+    val maxTagsToGenerate: Int = 5
+)
+
+@Serializable
+data class NoteMetadataFill(
+    val suggestedTitle: String? = null,
+    val suggestedTags: List<String> = emptyList(),
+    val summary: String? = null,
+    val suggestedWikilinks: List<String> = emptyList(),
+    val detectedLanguage: String = "en"
+)
+
+@Serializable
+data class ConnectionTestResult(
+    val isSuccess: Boolean,
+    val latencyMs: Long = 0L,
+    val modelName: String = "",
+    val errorMessage: String? = null
+)
 ```
 
 ---
