@@ -312,22 +312,41 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **`JsonIndexNoteRepository`**:
   - In-memory high-speed cache backed by `notes_index.json`. Stores only metadata (id, title, tags, updatedAt, isEncrypted) to allow sub-millisecond search queries while keeping body contents decoupled and encrypted at rest.
 
-### 4.4. Security & Cryptography (`com.notes.client.crypto`)
+### 4.4. Security & Cryptography (`com.notes.client.crypto` & `com.notes.common.crypto`)
 - **`E2eeCryptoEngine`**:
   - `encrypt(payload: ByteArray, key: ByteArray): ByteArray`
   - `decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray`
   - Enforces authenticated symmetric encryption using AES-GCM-256 with random 12-byte initialization vectors (IV) and 16-byte authentication tags.
 - **`Bip39RecoveryKit`**:
   - Generates 12-word mnemonic phrases and derives deterministic 256-bit root master keys using PBKDF2 with HMAC-SHA512.
+- **`ProtectedNoteCodec`**:
+  - `pack(note: SelfContainedProtectedNote): String`
+  - `unpack(rawContent: String): SelfContainedProtectedNote`
+  - Encodes and decodes self-contained protected notes (`.nap`) with `NA_PROTECTED_V1` magic header, client application signature, metadata JSON, and unencrypted raw payload boundary.
+  - Verifies passwords using PBKDF2 HMAC-SHA256 (1,000 iterations) with constant-time equality checks.
+- **`HmacSignatureEngine` & `PureCrypto`**:
+  - Pure Kotlin zero-dependency SHA-256 and HMAC-SHA256 implementations for cross-platform KMP targets.
+  - Generates and verifies canonical request signatures: `METHOD\nPATH\nTIMESTAMP\nNONCE\nBODY_HASH`.
+
+### 4.5. Client Authentication & Gated Settings (`com.notes.client.auth`)
+- **`AuthManager`**:
+  - Manages reactive authentication state (`SessionState.Authenticated` / `Unauthenticated`).
+  - Stores user profile, access token, `userApiKey`, `signingSecret`, and `UserCloudConfig`.
+- **`LoginRequiredDialog`**:
+  - Modal authentication barrier intercepting attempts to open system settings or cloud storage configurations for unauthenticated users.
+
+### 4.6. Device-Local Hardware Settings Driver (`com.notes.client.storage`)
+- **`DeviceSettingsDriver`**:
+  - Manages physical device runtime settings (`DeviceLocalModuleConfig`), including Skia GPU hardware acceleration, stylus pressure sensitivity curve, and local disk cache directories.
+  - Persisted strictly to physical device filesystem (`device_modules/module_{id}.json`), completely decoupled from cloud synchronization.
 
 ---
 
 ## 5. Security & Authorization Architecture
 
 ### 5.1. Zero-Knowledge Client-Side Encryption
-- Notes flagged as `isEncrypted = true` ("Protected Notes") are encrypted **exclusively on the client device**.
+- Notes flagged as `isEncrypted = true` ("Encrypted Notes") are encrypted **exclusively on the client device** using AES-GCM-256.
 - Plaintext data never touches the network and is never written to disk in unencrypted form.
-- The server stores only raw ciphertext bytes and metadata watermarks, ensuring absolute privacy even in the event of server compromise.
 
 ### 5.2. Cryptographic Algorithm Standards
 - **Symmetric Cipher**: AES-256 in Galois/Counter Mode (GCM).
@@ -335,6 +354,21 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **Key Derivation (Passphrase)**: PBKDF2 / Argon2id with random 16-byte salt and minimum 100,000 iterations.
 - **Recovery Mnemonic**: BIP-39 English wordlist standard with checksum validation.
 - **Biometric Enclave**: Hardware Keystore (Android KeyStore / Apple Secure Enclave) wraps the derived master vault key; biometric challenge releases the key into ephemeral memory.
+
+### 5.3. Self-Contained Protected Notes (`.nap`)
+- Notes flagged as `isProtected = true` are stored in a self-contained container format (`.nap`).
+- **Unencrypted Payload**: The note content (Markdown or `.cmn`) is preserved in its native unencrypted format inside the container boundary, meeting compliance and direct-sync requirements.
+- **Embedded Protection Data**: All protection metadata (salt, PBKDF2 check tag, auto-lock timeout, password hint) is embedded directly within the container header.
+- **Original Client Enforcement**: Only authentic clients possessing the verified application signature can unpack and display the note.
+- **Collaboration & Sync Boundary**: Protected notes cannot be co-edited in real time (`PROTECTED_NOTE_COLLAB_DISABLED`). Synchronization executes as an atomic whole-file replacement via `PUT /api/v1/sync/protected/{noteId}` without diffing.
+
+### 5.4. Two-Tier Configuration Architecture
+- **Tier 1 (User Cloud Profile - `UserCloudConfig`)**: Cloud-synchronized settings per user account, including local/remote vault paths, storage backend type (Cloudflare R2, MinIO, Local Disk), auto-sync schedules, and licensed modular constructor extensions.
+- **Tier 2 (Device Local Runtime - `DeviceLocalModuleConfig`)**: Hardware-specific configurations (GPU rendering, stylus pressure curve, local disk cache path) stored exclusively on the physical device and never uploaded to cloud.
+
+### 5.5. Per-User API Security & Cloudflare R2 Multi-Tenancy
+- **API Request Authentication**: Client-server API requests carry `X-User-Key`, `X-Timestamp`, `X-Nonce`, and `X-Signature`, validated against the user's private `signingSecret`.
+- **R2 Tenant Isolation**: All remote objects in Cloudflare R2 are namespaced under `users/{userId}/*`. The server validates that pre-signed URL requests cannot reference keys outside the caller's tenant boundary, returning HTTP 403 on cross-tenant attempts.
 
 ---
 

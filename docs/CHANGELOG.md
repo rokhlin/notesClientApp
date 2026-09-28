@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Implemented `AuthManager` reactive session management and state holder for user credentials, tokens, and per-user API key/signing secret.
+- Added `LoginRequiredDialog` modal gating barrier preventing unauthorized access to system settings, storage paths, and cloud synchronization profiles.
+- Implemented `SettingsDialog` two-tier configuration management separating Tier 1 User Cloud Profile & Storage Paths from Tier 2 Device Hardware Settings.
+- Implemented `DeviceSettingsDriver` managing local device module settings (Skia GPU hardware acceleration, stylus pressure curve, local disk cache directory) stored strictly on the physical hardware.
+- Implemented `ProtectedNoteCodec` container encoding/decoding for self-contained `.nap` protected notes with magic header `NA_PROTECTED_V1`, client application signature, PBKDF2 check-tag verification, and native unencrypted payload preservation.
+- Added `ProtectedNoteBarrier` in-editor password challenge barrier protecting individual notes with quick `[🔒 Re-Lock]` action in top bar.
+- Implemented `HmacSignatureEngine` and `PureCrypto` providing zero-dependency pure Kotlin SHA-256 and HMAC-SHA256 canonical request signing and verification for cross-platform KMP targets.
+- Added comprehensive unit test suite `AuthSettingsAndProtectedNoteTest` validating auth lifecycle, two-tier separation, `.nap` container codecs, and HMAC canonical signing.
 - Implemented `MarkdownFormatter` pure functional text transformation engine supporting selection wrapping (Bold, Italic, Strikethrough, Inline Code, Wikilinks, Links, Math), line-prefix toggling (H1-H3, Blockquotes, Bullet Lists, Task Checklists), code blocks, and markdown tables.
 - Implemented Compose Multiplatform `EditorToolbar` docked formatting action bar grounded in Obsidian and Samsung Notes UX benchmarks, supporting horizontal scrolling, accessible high-contrast Material 3 tokens, and selection-aware text manipulation.
 - Added comprehensive unit test suite `MarkdownFormatterTest` covering empty selections, selection wrapping, heading toggles, and complex markdown block formats.
