@@ -50,6 +50,7 @@ graph TD
         Nav["Jetpack Navigation Graph<br/>(NoteListRoute, CanvasRoute, DetailRoute, SettingsRoute)"]
         Scaffold["ObsidianScaffold<br/>(Ribbon, Sidebar, Inspector)"]
         CanvasUI["SkiaHandwrittenCanvas UI & Toolbar"]
+        EditorToolbarUI["EditorToolbar<br/>(Formatting Quick Actions)"]
         Dialogs["VaultUnlockDialog & QuickSwitcherDialog"]
     end
 
@@ -57,6 +58,7 @@ graph TD
         Catmull["CatmullRomConverter<br/>(Cubic Bézier Interpolation)"]
         Shape["ShapeRecognizer<br/>(Geometric Primitive Snapping)"]
         Wiki["WikilinkParser & Autocomplete<br/>([[TargetNote|Alias]])"]
+        MdFormatter["MarkdownFormatter<br/>(Selection-Aware Syntax Transformer)"]
         MdReg["MarkdownEngineRegistry<br/>(AstMarkdownEngine / RichTextMarkdownEngine)"]
         Crypto["E2eeCryptoEngine<br/>(AES-GCM-256 / Argon2 / BIP-39)"]
     end
@@ -76,6 +78,8 @@ graph TD
     CanvasUI --> Serializer
     Scaffold --> Wiki
     Scaffold --> MdReg
+    Scaffold --> EditorToolbarUI
+    EditorToolbarUI --> MdFormatter
     Dialogs --> Crypto
     Catmull --> Serializer
     Serializer --> FileStore

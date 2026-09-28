@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Implemented `MarkdownFormatter` pure functional text transformation engine supporting selection wrapping (Bold, Italic, Strikethrough, Inline Code, Wikilinks, Links, Math), line-prefix toggling (H1-H3, Blockquotes, Bullet Lists, Task Checklists), code blocks, and markdown tables.
+- Implemented Compose Multiplatform `EditorToolbar` docked formatting action bar grounded in Obsidian and Samsung Notes UX benchmarks, supporting horizontal scrolling, accessible high-contrast Material 3 tokens, and selection-aware text manipulation.
+- Added comprehensive unit test suite `MarkdownFormatterTest` covering empty selections, selection wrapping, heading toggles, and complex markdown block formats.
 - Added comprehensive living system architecture document (`docs/system_architecture.md`) detailing multiplatform runtime topology, Skia inking and Bézier smoothing pipelines, E2EE vault crypto protocols, API integration contracts, and zero-SQL storage architecture.
 - Initial project structure for Compose Multiplatform client.
 - Implemented shared Kotlin Multiplatform `:common-models` module defining `Note`, `InkPoint`, `InkStroke`, `CanvasLayer`, `CmnManifest`, `NoteMetadata`, `NotesIndexCatalog`, and `SyncDTOs`.

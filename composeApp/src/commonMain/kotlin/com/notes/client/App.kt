@@ -22,6 +22,9 @@ import com.notes.client.canvas.shapes.ShapeRecognizer
 import com.notes.client.components.ObsidianScaffold
 import com.notes.client.components.PrimaryButton
 import com.notes.client.crypto.VaultUnlockDialog
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import com.notes.client.editor.EditorToolbar
 import com.notes.client.editor.MarkdownEngineRegistry
 import com.notes.client.editor.WikilinkAutocompletePopup
 import com.notes.client.editor.WikilinkParser
@@ -383,41 +386,63 @@ fun App() {
                                 }
                             }
                         } else if (isEditMode) {
-                            val content = currentNote.content
+                            var editorTextFieldValue by remember(currentNote.id) {
+                                mutableStateOf(TextFieldValue(currentNote.content, TextRange(currentNote.content.length)))
+                            }
+                            if (editorTextFieldValue.text != currentNote.content) {
+                                editorTextFieldValue = editorTextFieldValue.copy(text = currentNote.content)
+                            }
+                            val content = editorTextFieldValue.text
                             // Check if cursor/content currently has an active [[ autocomplete query
                             val showAutocomplete = content.contains("[[") && !content.substringAfterLast("[[").contains("]")
                             val autocompleteQuery = if (showAutocomplete) content.substringAfterLast("[[").trim() else ""
 
-                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                                OutlinedTextField(
-                                    value = currentNote.content,
-                                    onValueChange = { newContent ->
-                                        val updated = currentNote.copy(content = newContent)
+                            Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                EditorToolbar(
+                                    value = editorTextFieldValue,
+                                    onValueChange = { newValue ->
+                                        editorTextFieldValue = newValue
+                                        val updated = currentNote.copy(content = newValue.text)
                                         activeNote = updated
                                         notes = notes.map { if (it.id == updated.id) updated else it }
                                     },
-                                    textStyle = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.fillMaxSize(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
-                                    )
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
 
-                                if (showAutocomplete) {
-                                    WikilinkAutocompletePopup(
-                                        query = autocompleteQuery,
-                                        allNotes = notes,
-                                        onSelectNote = { selected ->
-                                            val prefix = content.substringBeforeLast("[[")
-                                            val newContent = "$prefix[[${selected.title}]] "
-                                            val updated = currentNote.copy(content = newContent)
+                                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                    OutlinedTextField(
+                                        value = editorTextFieldValue,
+                                        onValueChange = { newValue ->
+                                            editorTextFieldValue = newValue
+                                            val updated = currentNote.copy(content = newValue.text)
                                             activeNote = updated
                                             notes = notes.map { if (it.id == updated.id) updated else it }
                                         },
-                                        onDismiss = { /* Dismiss popup */ },
-                                        modifier = Modifier.align(Alignment.TopStart).padding(top = 40.dp)
+                                        textStyle = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.fillMaxSize(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                                            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                                        )
                                     )
+
+                                    if (showAutocomplete) {
+                                        WikilinkAutocompletePopup(
+                                            query = autocompleteQuery,
+                                            allNotes = notes,
+                                            onSelectNote = { selected ->
+                                                val prefix = content.substringBeforeLast("[[")
+                                                val newContent = "$prefix[[${selected.title}]] "
+                                                val newTfv = TextFieldValue(newContent, TextRange(newContent.length))
+                                                editorTextFieldValue = newTfv
+                                                val updated = currentNote.copy(content = newContent)
+                                                activeNote = updated
+                                                notes = notes.map { if (it.id == updated.id) updated else it }
+                                            },
+                                            onDismiss = { /* Dismiss popup */ },
+                                            modifier = Modifier.align(Alignment.TopStart).padding(top = 40.dp)
+                                        )
+                                    }
                                 }
                             }
                         } else {
