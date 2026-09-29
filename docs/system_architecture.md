@@ -17,6 +17,7 @@ notesClientApp/
 │   └── src/commonMain/kotlin/com/notes/common/models/
 ├── composeApp/              # Compose Multiplatform UI, state machines & client engines
 │   ├── src/commonMain/kotlin/com/notes/client/
+│   │   ├── ai/              # Multi-provider AI services, context truncator, prompt builder, sanitizer
 │   │   ├── biometrics/      # Biometric authentication adapters & enclave integration
 │   │   ├── canvas/          # Skia vector canvas, smoothing, brushes, shapes & .cmn codecs
 │   │   ├── components/      # Material 3 shared UI components & dialogs
@@ -149,6 +150,43 @@ sequenceDiagram
         Crypto-->>Dialog: CryptoException("Authentication tag mismatch")
         Dialog-->>User: Display error & keep payload encrypted
     end
+```
+
+### 2.4. Contextual AI Smart Metadata Analysis Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Editor as Workspace Editor / Scaffold
+    participant Guard as Privacy Shield Guard
+    participant Service as AiClientService
+    participant Trunc as ContextTruncator
+    participant Transport as HttpTransport
+    participant LLM as AI Provider (Gemini / OpenAI / Claude / Local)
+    participant Dialog as SmartMetadataDialog
+    participant Repo as NoteRepository
+
+    User->>Editor: Click [✨ AI Metadata]
+    Editor->>Guard: Verify note protection / encryption state
+    alt Protected / Encrypted & Cloud Provider
+        Guard->>User: Display Privacy Warning Confirmation Modal
+        User->>Guard: Click [Proceed & Analyze]
+    end
+    Guard->>Trunc: Truncate note content (max 32k chars, keep headings)
+    Trunc-->>Service: Sanitized context
+    Service->>Transport: POST prompt payload to active provider
+    Transport->>LLM: Dispatches HTTP request
+    alt Primary Provider 404 / 410 / 429 & Failover Enabled
+        LLM-->>Transport: Error status code
+        Transport->>LLM: Fallback model dispatch (e.g. Gemini 3.8 Flash)
+    end
+    LLM-->>Transport: Raw AI response
+    Transport-->>Service: HTTP response text
+    Service->>Service: Sanitize & parse NoteMetadataFill
+    Service-->>Dialog: Display suggestions (title, tags, summary, wikilinks)
+    User->>Dialog: Toggle selected tags / title / summary
+    User->>Dialog: Click [Apply Selected Metadata]
+    Dialog->>Repo: Atomically save updated note
 ```
 
 ---
@@ -312,22 +350,53 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **`JsonIndexNoteRepository`**:
   - In-memory high-speed cache backed by `notes_index.json`. Stores only metadata (id, title, tags, updatedAt, isEncrypted) to allow sub-millisecond search queries while keeping body contents decoupled and encrypted at rest.
 
-### 4.4. Security & Cryptography (`com.notes.client.crypto`)
+### 4.4. Security & Cryptography (`com.notes.client.crypto` & `com.notes.common.crypto`)
 - **`E2eeCryptoEngine`**:
   - `encrypt(payload: ByteArray, key: ByteArray): ByteArray`
   - `decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray`
   - Enforces authenticated symmetric encryption using AES-GCM-256 with random 12-byte initialization vectors (IV) and 16-byte authentication tags.
 - **`Bip39RecoveryKit`**:
   - Generates 12-word mnemonic phrases and derives deterministic 256-bit root master keys using PBKDF2 with HMAC-SHA512.
+- **`ProtectedNoteCodec`**:
+  - `pack(note: SelfContainedProtectedNote): String`
+  - `unpack(rawContent: String): SelfContainedProtectedNote`
+  - Encodes and decodes self-contained protected notes (`.nap`) with `NA_PROTECTED_V1` magic header, client application signature, metadata JSON, and unencrypted raw payload boundary.
+  - Verifies passwords using PBKDF2 HMAC-SHA256 (1,000 iterations) with constant-time equality checks.
+- **`HmacSignatureEngine` & `PureCrypto`**:
+  - Pure Kotlin zero-dependency SHA-256 and HMAC-SHA256 implementations for cross-platform KMP targets.
+  - Generates and verifies canonical request signatures: `METHOD\nPATH\nTIMESTAMP\nNONCE\nBODY_HASH`.
+
+### 4.5. Client Authentication & Gated Settings (`com.notes.client.auth`)
+- **`AuthManager`**:
+  - Manages reactive authentication state (`SessionState.Authenticated` / `Unauthenticated`).
+  - Stores user profile, access token, `userApiKey`, `signingSecret`, and `UserCloudConfig`.
+- **`LoginRequiredDialog`**:
+  - Modal authentication barrier intercepting attempts to open system settings or cloud storage configurations for unauthenticated users.
+
+### 4.6. Device-Local Hardware Settings Driver (`com.notes.client.storage`)
+- **`DeviceSettingsDriver`**:
+  - Manages physical device runtime settings (`DeviceLocalModuleConfig`), including Skia GPU hardware acceleration, stylus pressure sensitivity curve, and local disk cache directories.
+  - Persisted strictly to physical device filesystem (`device_modules/module_{id}.json`), completely decoupled from cloud synchronization.
+  - Manages offline local persistence for AI provider configurations (`device_modules/ai_settings.json`).
+
+### 4.7. Contextual AI Subsystem (`com.notes.client.ai`)
+- **`AiClientService`**:
+  - Unified multiplatform AI client executing metadata filling and connection diagnostics across Google Gemini, OpenAI, Anthropic Claude, and Local Server LLMs.
+  - Implements automatic model failover (e.g. `gemini-3.5-flash` $\to$ `gemini-3.8-flash` on HTTP 404/410/429) and dynamic model discovery via `/api/tags` and `/v1/models`.
+- **`ContextTruncator`**:
+  - Binds note content to a hard 32,000-character limit, extracting and preserving markdown heading outlines (H1–H6) to maintain document structure while discarding verbose canvas coordinate strokes.
+- **`PromptBuilder`**:
+  - Constructs structured system and user prompts enforcing valid `NoteMetadataFill` JSON schemas while passing existing note tags to eliminate duplicate generation.
+- **`JsonSanitizer`**:
+  - Strips markdown code fences (````json ... ````), extracts bracketed JSON substrings, normalizes tags to lowercase/kebab-case, and provides regex tag extraction fallback.
 
 ---
 
 ## 5. Security & Authorization Architecture
 
 ### 5.1. Zero-Knowledge Client-Side Encryption
-- Notes flagged as `isEncrypted = true` ("Protected Notes") are encrypted **exclusively on the client device**.
+- Notes flagged as `isEncrypted = true` ("Encrypted Notes") are encrypted **exclusively on the client device** using AES-GCM-256.
 - Plaintext data never touches the network and is never written to disk in unencrypted form.
-- The server stores only raw ciphertext bytes and metadata watermarks, ensuring absolute privacy even in the event of server compromise.
 
 ### 5.2. Cryptographic Algorithm Standards
 - **Symmetric Cipher**: AES-256 in Galois/Counter Mode (GCM).
@@ -335,6 +404,26 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
 - **Key Derivation (Passphrase)**: PBKDF2 / Argon2id with random 16-byte salt and minimum 100,000 iterations.
 - **Recovery Mnemonic**: BIP-39 English wordlist standard with checksum validation.
 - **Biometric Enclave**: Hardware Keystore (Android KeyStore / Apple Secure Enclave) wraps the derived master vault key; biometric challenge releases the key into ephemeral memory.
+
+### 5.3. Self-Contained Protected Notes (`.nap`)
+- Notes flagged as `isProtected = true` are stored in a self-contained container format (`.nap`).
+- **Unencrypted Payload**: The note content (Markdown or `.cmn`) is preserved in its native unencrypted format inside the container boundary, meeting compliance and direct-sync requirements.
+- **Embedded Protection Data**: All protection metadata (salt, PBKDF2 check tag, auto-lock timeout, password hint) is embedded directly within the container header.
+- **Original Client Enforcement**: Only authentic clients possessing the verified application signature can unpack and display the note.
+- **Collaboration & Sync Boundary**: Protected notes cannot be co-edited in real time (`PROTECTED_NOTE_COLLAB_DISABLED`). Synchronization executes as an atomic whole-file replacement via `PUT /api/v1/sync/protected/{noteId}` without diffing.
+
+### 5.4. Two-Tier Configuration Architecture
+- **Tier 1 (User Cloud Profile - `UserCloudConfig`)**: Cloud-synchronized settings per user account, including local/remote vault paths, storage backend type (Cloudflare R2, MinIO, Local Disk), auto-sync schedules, and licensed modular constructor extensions.
+- **Tier 2 (Device Local Runtime - `DeviceLocalModuleConfig`)**: Hardware-specific configurations (GPU rendering, stylus pressure curve, local disk cache path) stored exclusively on the physical device and never uploaded to cloud.
+
+### 5.5. Per-User API Security & Cloudflare R2 Multi-Tenancy
+- **API Request Authentication**: Client-server API requests carry `X-User-Key`, `X-Timestamp`, `X-Nonce`, and `X-Signature`, validated against the user's private `signingSecret`.
+- **R2 Tenant Isolation**: All remote objects in Cloudflare R2 are namespaced under `users/{userId}/*`. The server validates that pre-signed URL requests cannot reference keys outside the caller's tenant boundary, returning HTTP 403 on cross-tenant attempts.
+
+### 5.6. AI Privacy Shield & Local Execution
+- **Privacy Shield Guard**: Analyzes the security state of notes before context generation. If `isProtected` or `isEncrypted` is true, AI analysis is completely blocked while locked. When unlocked, any request directed to an external cloud provider (Google Gemini, OpenAI, Anthropic Claude) triggers an explicit Privacy Notice modal requiring affirmative user confirmation before sending note context over the network.
+- **Zero Cloud Egress for Local LLMs**: When configured with `LOCAL_SERVER` (Ollama or OpenAI-compatible local server), all HTTP requests are dispatched exclusively to the user-specified localhost/LAN endpoint (`http://localhost:11434`), guaranteeing complete privacy with zero external transmission.
+- **Credential Masking & Security**: API keys are rendered with `PasswordVisualTransformation` with eye toggles, saved locally in `DeviceSettingsDriver` hardware storage, and never output in plaintext log files.
 
 ---
 
@@ -349,6 +438,8 @@ To allow flexible customization without rebuilding, the client implements plugga
 | **Shape Auto-Snapping**| Enabled (0.5s hold) / Disabled | Enabled | `CanvasToolbar` / Settings |
 | **Workspace Layout** | Zero-tab Obsidian-style (Ribbon + Sidebar + Inspector) | Enforced (ADR Q6) | `ObsidianScaffold` |
 | **Storage Engine** | Zero-SQL Sandboxed JSON / .cmn | Enforced (ADR Q19) | `NoteStorageRepository` |
+| **AI Active Provider** | `GEMINI`, `OPENAI`, `ANTHROPIC`, `LOCAL_SERVER` | `GEMINI` | `AiSettingsConfig` |
+| **Local AI Protocol** | `OLLAMA_NATIVE`, `OPENAI_COMPATIBLE` | `OLLAMA_NATIVE` | `AiProviderConfig` |
 
 ---
 
@@ -424,6 +515,49 @@ Offset (Bytes)   Length          Field Content
 0x08             N Bytes         Manifest JSON (UTF-8 Encoded Schema)
 0x08 + N         4 Bytes         Layer Payload Count (UInt32)
 ...              M Bytes         Binary Layer & Stroke Coordinate Arrays
+```
+
+### 7.3. AI Provider & Metadata Data Contracts (`:common-models`)
+```kotlin
+enum class AiProviderType { GEMINI, OPENAI, ANTHROPIC, LOCAL_SERVER }
+enum class LocalAiProtocol { OPENAI_COMPATIBLE, OLLAMA_NATIVE }
+
+@Serializable
+data class AiProviderConfig(
+    val providerType: AiProviderType = AiProviderType.GEMINI,
+    val apiKey: String = "",
+    val primaryModelId: String = "gemini-3.5-flash",
+    val fallbackModelId: String? = "gemini-3.8-flash",
+    val isFallbackEnabled: Boolean = true,
+    val baseUrl: String = "https://generativelanguage.googleapis.com",
+    val isEnabled: Boolean = true,
+    val localProtocol: LocalAiProtocol = LocalAiProtocol.OPENAI_COMPATIBLE
+)
+
+@Serializable
+data class AiSettingsConfig(
+    val activeProvider: AiProviderType = AiProviderType.GEMINI,
+    val providers: Map<AiProviderType, AiProviderConfig> = defaultProviders(),
+    val autoSuggestOnNoteCreation: Boolean = false,
+    val maxTagsToGenerate: Int = 5
+)
+
+@Serializable
+data class NoteMetadataFill(
+    val suggestedTitle: String? = null,
+    val suggestedTags: List<String> = emptyList(),
+    val summary: String? = null,
+    val suggestedWikilinks: List<String> = emptyList(),
+    val detectedLanguage: String = "en"
+)
+
+@Serializable
+data class ConnectionTestResult(
+    val isSuccess: Boolean,
+    val latencyMs: Long = 0L,
+    val modelName: String = "",
+    val errorMessage: String? = null
+)
 ```
 
 ---

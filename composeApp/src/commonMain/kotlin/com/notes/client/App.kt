@@ -31,13 +31,27 @@ import com.notes.client.editor.WikilinkParser
 import com.notes.client.storage.JsonIndexNoteRepository
 import com.notes.client.storage.StorageVaultDialog
 import com.notes.client.theme.NotesTheme
+import com.notes.client.auth.AuthManager
+import com.notes.client.auth.LoginRequiredDialog
+import com.notes.client.components.SettingsDialog
+import com.notes.client.crypto.ProtectedNoteBarrier
+import com.notes.client.storage.DeviceSettingsDriver
+import com.notes.common.crypto.ProtectedNoteCodec
+import com.notes.client.ai.AiClientService
+import com.notes.client.ai.DefaultAiClientService
+import com.notes.client.components.SmartMetadataDialog
+import com.notes.common.models.AiMetadataRequest
+import com.notes.common.models.AiProviderConfig
+import com.notes.common.models.AiProviderType
 import com.notes.common.models.CanvasLayer
 import com.notes.common.models.InkPoint
 import com.notes.common.models.InkStroke
 import com.notes.common.models.LayerType
 import com.notes.common.models.Note
+import com.notes.common.models.NoteMetadataFill
 import com.notes.common.models.NoteType
 import com.notes.common.models.ToolType
+import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
@@ -73,20 +87,34 @@ fun App() {
                     ),
                     Note(
                         id = "4",
+                        title = "Security & Storage Manifest",
+                        content = "# Security & Storage Manifest\n\n- Individual Note Password Protection (Self-Contained .nap Container)\n- Unified R2 Cloud Storage with per-tenant users/{userId}/ isolation\n- API request authentication with userApiKey + HMAC-SHA256 signature\n- Two-tier configuration: UserCloudConfig (synced) & DeviceLocalModuleConfig (hardware)",
+                        type = NoteType.TEXT,
+                        tags = listOf("security", "protected", "starred"),
+                        isProtected = true,
+                        createdAt = 1717030000000L
+                    ),
+                    Note(
+                        id = "5",
                         title = "E2EE Master Key Vault Spec",
                         content = "# E2EE Master Key Vault Spec\n\n- Zero-Knowledge client-side authenticated encryption (AES-GCM-256)\n- Non-custodial 12-word BIP-39 recovery mnemonic seed phrase\n- Constant-time MAC authentication tag verification",
                         type = NoteType.TEXT,
-                        tags = listOf("security", "crypto", "starred"),
+                        tags = listOf("security", "crypto"),
                         isEncrypted = true,
-                        createdAt = 1717030000000L
+                        createdAt = 1717035000000L
                     )
                 )
             )
         }
 
+        val authManager = remember { AuthManager() }
+        val deviceSettingsDriver = remember { DeviceSettingsDriver() }
+        var showLoginRequiredDialog by remember { mutableStateOf(false) }
+        var showSettingsDialog by remember { mutableStateOf(false) }
+        var unlockedNoteIds by remember { mutableStateOf(setOf<String>()) }
+
         var activeNote by remember { mutableStateOf<Note?>(notes.firstOrNull()) }
         var showAddDialog by remember { mutableStateOf(false) }
-        var showSettingsDialog by remember { mutableStateOf(false) }
         var activeEngineId by remember { mutableStateOf("ast-renderer") }
         var isEditMode by remember { mutableStateOf(false) }
         var unresolvedLinkTarget by remember { mutableStateOf<String?>(null) }
@@ -143,6 +171,65 @@ fun App() {
             } ?: emptyList()
         }
 
+        val aiClientService = remember { DefaultAiClientService() }
+        val coroutineScope = rememberCoroutineScope()
+        var showSmartMetadataDialog by remember { mutableStateOf(false) }
+        var activeMetadataFill by remember { mutableStateOf<NoteMetadataFill?>(null) }
+        var isAiLoading by remember { mutableStateOf(false) }
+        var aiErrorMessage by remember { mutableStateOf<String?>(null) }
+        var showAiErrorDialog by remember { mutableStateOf(false) }
+        var showPrivacyWarningDialog by remember { mutableStateOf(false) }
+        var privacyWarningPendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+        fun executeAiMetadataFill(note: Note) {
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            val providerConfig = aiSettings.providers[aiSettings.activeProvider] ?: AiProviderConfig(providerType = aiSettings.activeProvider)
+            isAiLoading = true
+            coroutineScope.launch {
+                val request = AiMetadataRequest(
+                    noteId = note.id,
+                    title = note.title,
+                    content = note.content,
+                    existingTags = note.tags,
+                    maxTags = aiSettings.maxTagsToGenerate
+                )
+                val result = aiClientService.fillMetadata(request, providerConfig)
+                isAiLoading = false
+                result.fold(
+                    onSuccess = { fill ->
+                        activeMetadataFill = fill
+                        showSmartMetadataDialog = true
+                    },
+                    onFailure = { error ->
+                        aiErrorMessage = error.message ?: "Failed to generate metadata"
+                        showAiErrorDialog = true
+                    }
+                )
+            }
+        }
+
+        fun triggerAiMetadata() {
+            val note = activeNote ?: return
+            if (note.isProtected && !unlockedNoteIds.contains(note.id)) {
+                aiErrorMessage = "This note is password-protected. Please unlock it before requesting AI metadata."
+                showAiErrorDialog = true
+                return
+            }
+            if (note.isEncrypted && !isVaultUnlocked) {
+                aiErrorMessage = "This note is encrypted. Please unlock your vault before requesting AI metadata."
+                showAiErrorDialog = true
+                return
+            }
+
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            if (aiSettings.activeProvider != AiProviderType.LOCAL_SERVER && (note.isProtected || note.isEncrypted)) {
+                privacyWarningPendingAction = { executeAiMetadataFill(note) }
+                showPrivacyWarningDialog = true
+            } else {
+                executeAiMetadataFill(note)
+            }
+        }
+
         ObsidianScaffold(
             notes = notes,
             activeNote = activeNote,
@@ -170,7 +257,14 @@ fun App() {
                 activeNote = newNote
             },
             onToggleTheme = { isDarkTheme = !isDarkTheme },
-            onOpenSettings = { showSettingsDialog = true }
+            onOpenSettings = {
+                if (authManager.isAuthenticated) {
+                    showSettingsDialog = true
+                } else {
+                    showLoginRequiredDialog = true
+                }
+            },
+            onTriggerAiMetadata = { triggerAiMetadata() }
         ) { currentNote ->
             if (currentNote != null) {
                 // Unified Workspace Canvas (NO TABS) - Single Document Focus
@@ -213,6 +307,15 @@ fun App() {
                                     colors = AssistChipDefaults.assistChipColors(
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                                         labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                AssistChip(
+                                    onClick = { triggerAiMetadata() },
+                                    label = { Text("✨ AI Metadata") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -333,6 +436,28 @@ fun App() {
                                 )
                             )
 
+                            if (currentNote.isProtected) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val isUnlocked = unlockedNoteIds.contains(currentNote.id)
+                                AssistChip(
+                                    onClick = {
+                                        if (isUnlocked) {
+                                            unlockedNoteIds = unlockedNoteIds - currentNote.id
+                                        }
+                                    },
+                                    label = { Text(if (isUnlocked) "🔒 Re-Lock" else "🛡️ Protected") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                                        labelColor = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                AssistChip(
+                                    onClick = {},
+                                    label = { Text("⚡ No Collab") }
+                                )
+                            }
+
                             if (currentNote.isEncrypted) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 AssistChip(
@@ -347,10 +472,19 @@ fun App() {
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
+                            AssistChip(
+                                onClick = { triggerAiMetadata() },
+                                label = { Text("✨ AI Metadata") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             // Edit / Preview toggle pill
                             TextButton(
                                 onClick = { isEditMode = !isEditMode },
-                                enabled = !currentNote.isEncrypted || isVaultUnlocked
+                                enabled = (!currentNote.isEncrypted || isVaultUnlocked) && (!currentNote.isProtected || unlockedNoteIds.contains(currentNote.id))
                             ) {
                                 Text(
                                     text = if (isEditMode) "👁️ View (${currentEngine.displayName})" else "✏️ Edit Source",
@@ -360,7 +494,20 @@ fun App() {
                             }
                         }
 
-                        if (currentNote.isEncrypted && !isVaultUnlocked) {
+                        if (currentNote.isProtected && !unlockedNoteIds.contains(currentNote.id)) {
+                            val sampleSalt = "aabbccddeeff00112233445566778899"
+                            val sampleCheckTag = remember { ProtectedNoteCodec.deriveCheckTag("secret123", sampleSalt) }
+
+                            ProtectedNoteBarrier(
+                                note = currentNote,
+                                passwordHint = "Default demo password: 'secret123'",
+                                expectedCheckTagHex = sampleCheckTag,
+                                saltHex = sampleSalt,
+                                onUnlocked = {
+                                    unlockedNoteIds = unlockedNoteIds + currentNote.id
+                                }
+                            )
+                        } else if (currentNote.isEncrypted && !isVaultUnlocked) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -542,41 +689,23 @@ fun App() {
             )
         }
 
-        if (showSettingsDialog) {
-            AlertDialog(
-                onDismissRequest = { showSettingsDialog = false },
-                title = { Text("Settings & Vault") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Dark Theme", style = MaterialTheme.typography.bodyMedium)
-                            Switch(
-                                checked = isDarkTheme,
-                                onCheckedChange = { isDarkTheme = it }
-                            )
-                        }
-                        FilledTonalButton(
-                            onClick = { showStorageDialog = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("🗄️ Inspect Sandboxed Vault & Index")
-                        }
-                        Text(
-                            "NotesAlltogether v1.0.0 (Compose Multiplatform)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showSettingsDialog = false }) {
-                        Text("Close")
-                    }
+        if (showLoginRequiredDialog) {
+            LoginRequiredDialog(
+                authManager = authManager,
+                onDismiss = { showLoginRequiredDialog = false },
+                onSuccess = {
+                    showLoginRequiredDialog = false
+                    showSettingsDialog = true
                 }
+            )
+        }
+
+        if (showSettingsDialog) {
+            SettingsDialog(
+                authManager = authManager,
+                deviceSettingsDriver = deviceSettingsDriver,
+                onOpenStorageVault = { showStorageDialog = true },
+                onDismiss = { showSettingsDialog = false }
             )
         }
 
@@ -594,6 +723,114 @@ fun App() {
                 onUnlocked = {
                     isVaultUnlocked = true
                     showUnlockVaultDialog = false
+                }
+            )
+        }
+
+        if (showSmartMetadataDialog && activeMetadataFill != null && activeNote != null) {
+            val noteToUpdate = activeNote!!
+            val aiSettings = deviceSettingsDriver.getAiSettingsConfig()
+            SmartMetadataDialog(
+                initialFill = activeMetadataFill!!,
+                currentTitle = noteToUpdate.title,
+                existingTags = noteToUpdate.tags,
+                activeProviderName = when (aiSettings.activeProvider) {
+                    AiProviderType.GEMINI -> "Google Gemini"
+                    AiProviderType.OPENAI -> "OpenAI"
+                    AiProviderType.ANTHROPIC -> "Anthropic Claude"
+                    AiProviderType.LOCAL_SERVER -> "Local LLM Server"
+                },
+                onApply = { newTitle, tagsToAdd, summaryToInsert ->
+                    val updatedTitle = if (!newTitle.isNullOrBlank()) newTitle else noteToUpdate.title
+                    val updatedTags = (noteToUpdate.tags + tagsToAdd).distinct()
+                    val updatedContent = if (!summaryToInsert.isNullOrBlank()) {
+                        "> **Summary:** $summaryToInsert\n\n${noteToUpdate.content}"
+                    } else {
+                        noteToUpdate.content
+                    }
+                    val updatedNote = noteToUpdate.copy(
+                        title = updatedTitle,
+                        tags = updatedTags,
+                        content = updatedContent
+                    )
+                    storageRepository.saveNote(updatedNote)
+                    notes = notes.map { if (it.id == updatedNote.id) updatedNote else it }
+                    activeNote = updatedNote
+                    showSmartMetadataDialog = false
+                    activeMetadataFill = null
+                },
+                onDismiss = {
+                    showSmartMetadataDialog = false
+                    activeMetadataFill = null
+                }
+            )
+        }
+
+        if (isAiLoading) {
+            val aiSettings = remember { deviceSettingsDriver.getAiSettingsConfig() }
+            AlertDialog(
+                onDismissRequest = { /* Modal in-progress */ },
+                confirmButton = {},
+                title = { Text("✨ Analyzing Note Context") },
+                text = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        Column {
+                            Text("Querying ${aiSettings.activeProvider.name}...", style = MaterialTheme.typography.bodyMedium)
+                            Text("Generating smart tags, summary, and title...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showAiErrorDialog) {
+            AlertDialog(
+                onDismissRequest = { showAiErrorDialog = false },
+                title = { Text("AI Metadata Suggestion") },
+                text = {
+                    Text(aiErrorMessage ?: "An unexpected error occurred while analyzing note context.")
+                },
+                confirmButton = {
+                    Button(onClick = { showAiErrorDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
+        if (showPrivacyWarningDialog) {
+            val aiSettings = remember { deviceSettingsDriver.getAiSettingsConfig() }
+            AlertDialog(
+                onDismissRequest = {
+                    showPrivacyWarningDialog = false
+                    privacyWarningPendingAction = null
+                },
+                title = { Text("🛡️ Privacy & Confidentiality Notice") },
+                text = {
+                    Text("This note is designated as protected or encrypted. Requesting AI suggestions will transmit the sanitized note context to the external cloud provider (${aiSettings.activeProvider.name}).\n\nDo you want to proceed with transmission?")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        showPrivacyWarningDialog = false
+                        val action = privacyWarningPendingAction
+                        privacyWarningPendingAction = null
+                        action?.invoke()
+                    }) {
+                        Text("Proceed & Analyze")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showPrivacyWarningDialog = false
+                        privacyWarningPendingAction = null
+                    }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

@@ -1,0 +1,68 @@
+name: Update AI Model Catalog
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Runs every Monday at 00:00 UTC
+  workflow_dispatch:   # Manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  sync-models:
+    name: Sync AI Model Catalog & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Model Sync Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/update_ai_models.py --changelog build/ai_models_changelog.md
+
+      - name: Check for Catalog Changes
+        id: git_diff
+        run: |
+          if git diff --quiet common-models/src/commonMain/resources/ai_models_catalog.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in AI model catalog."
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in AI model catalog."
+          fi
+
+      - name: Commit & Push Changes
+        if: steps.git_diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION=$(python -c "import json; print(json.load(open('common-models/src/commonMain/resources/ai_models_catalog.json'))['catalogVersion'])")
+          git add common-models/src/commonMain/resources/ai_models_catalog.json
+          if [ -d "notesServer" ]; then
+            cp common-models/src/commonMain/resources/ai_models_catalog.json notesServer/src/main/resources/ai_models_catalog.json 2>/dev/null || true
+            git add notesServer/src/main/resources/ai_models_catalog.json 2>/dev/null || true
+          fi
+          git commit -m "chore(ai): sync active AI models catalog to v${VERSION} [skip ci]"
+          git push origin HEAD
+
+      - name: Create Release Tag
+        if: steps.git_diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(python -c "import json; print(json.load(open('common-models/src/commonMain/resources/ai_models_catalog.json'))['catalogVersion'])")
+          TAG_NAME="models-v${VERSION}"
+          gh release create "$TAG_NAME" \
+            --title "AI Model Catalog v${VERSION}" \
+            --notes-file build/ai_models_changelog.md

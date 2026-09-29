@@ -9,6 +9,7 @@ data class NoteMetadata(
     val tags: List<String> = emptyList(),
     val type: NoteType = NoteType.TEXT,
     val isEncrypted: Boolean = false,
+    val isProtected: Boolean = false,
     val updatedAt: Long = 0L,
     val sizeBytes: Long = 0L
 )

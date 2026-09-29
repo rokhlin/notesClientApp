@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Implemented Multi-Provider AI Connectivity (`AiClientService`) supporting Google Gemini (with `gemini-3.5-flash` primary and automated failover to `gemini-3.8-flash`), OpenAI (`gpt-4o-mini`), Anthropic Claude (`claude-3-5-haiku-20241022`), and Local LLM Servers (Ollama native & OpenAI-compatible).
+- Added Dynamic Local Model Discovery querying `/api/tags` and `/v1/models` on local server endpoints to auto-populate installed LLM model selectors.
+- Added live Connection Test diagnostic tool (`testConnection`) measuring ping latency and verifying authentication credentials with real-time status pills.
+- Added Tab 2 ("🤖 AI Providers") to `SettingsDialog` with password-masked API keys, eye reveal toggles, model chip pickers, and dual local/cloud persistence.
+- Implemented `SmartMetadataDialog` review modal with interactive tag selection chips, suggested title toggle, document executive summary checkbox, and wikilink detection chips.
+- Added dual-entry metadata triggers via Editor top bar (`[✨ AI Metadata]`) and Right Sidebar Document Properties (`[✨ Auto-Fill Metadata]`).
+- Implemented Privacy Shield guard verifying protected/encrypted note status and requiring explicit confirmation dialog before transmitting sensitive note context to cloud providers.
+- Implemented `ContextTruncator` (32,000 character limit preserving document headings) and resilient `JsonSanitizer` with regex extraction fallback.
+- Added comprehensive unit test suite `AiServiceTest` and `AiModelsTest` covering all provider engines, Gemini failover, and Ollama discovery with 100% pass rate.
+- Implemented `AuthManager` reactive session management and state holder for user credentials, tokens, and per-user API key/signing secret.
+- Added `LoginRequiredDialog` modal gating barrier preventing unauthorized access to system settings, storage paths, and cloud synchronization profiles.
+- Implemented `SettingsDialog` two-tier configuration management separating Tier 1 User Cloud Profile & Storage Paths from Tier 2 Device Hardware Settings.
+- Implemented `DeviceSettingsDriver` managing local device module settings (Skia GPU hardware acceleration, stylus pressure curve, local disk cache directory) stored strictly on the physical hardware.
+- Implemented `ProtectedNoteCodec` container encoding/decoding for self-contained `.nap` protected notes with magic header `NA_PROTECTED_V1`, client application signature, PBKDF2 check-tag verification, and native unencrypted payload preservation.
+- Added `ProtectedNoteBarrier` in-editor password challenge barrier protecting individual notes with quick `[🔒 Re-Lock]` action in top bar.
+- Implemented `HmacSignatureEngine` and `PureCrypto` providing zero-dependency pure Kotlin SHA-256 and HMAC-SHA256 canonical request signing and verification for cross-platform KMP targets.
+- Added comprehensive unit test suite `AuthSettingsAndProtectedNoteTest` validating auth lifecycle, two-tier separation, `.nap` container codecs, and HMAC canonical signing.
 - Implemented `MarkdownFormatter` pure functional text transformation engine supporting selection wrapping (Bold, Italic, Strikethrough, Inline Code, Wikilinks, Links, Math), line-prefix toggling (H1-H3, Blockquotes, Bullet Lists, Task Checklists), code blocks, and markdown tables.
 - Implemented Compose Multiplatform `EditorToolbar` docked formatting action bar grounded in Obsidian and Samsung Notes UX benchmarks, supporting horizontal scrolling, accessible high-contrast Material 3 tokens, and selection-aware text manipulation.
 - Added comprehensive unit test suite `MarkdownFormatterTest` covering empty selections, selection wrapping, heading toggles, and complex markdown block formats.

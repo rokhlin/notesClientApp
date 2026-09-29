@@ -36,6 +36,7 @@ fun ObsidianScaffold(
     onCreateNote: (String) -> Unit,
     onToggleTheme: () -> Unit,
     onOpenSettings: () -> Unit,
+    onTriggerAiMetadata: (() -> Unit)? = null,
     content: @Composable (Note?) -> Unit
 ) {
     var isLeftSidebarOpen by remember { mutableStateOf(true) }
@@ -378,6 +379,17 @@ fun ObsidianScaffold(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+
+                            if (onTriggerAiMetadata != null) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                OutlinedButton(
+                                    onClick = onTriggerAiMetadata,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text("✨ Auto-Fill Metadata", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
 
                             if (backlinks.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(16.dp))
