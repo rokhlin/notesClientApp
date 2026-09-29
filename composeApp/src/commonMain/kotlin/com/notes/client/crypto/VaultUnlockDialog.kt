@@ -2,6 +2,9 @@ package com.notes.client.crypto
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,7 +89,13 @@ fun VaultUnlockDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("👆 Unlock with Biometrics (Touch ID / Face ID)")
+                        Icon(
+                            imageVector = Icons.Default.Fingerprint,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Unlock with Biometrics (Touch ID / Face ID)")
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -142,7 +151,7 @@ fun VaultUnlockDialog(
                     val words = recoveryPhrase.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
                     val isValidWordCount = words.size == 12
                     Text(
-                        text = if (isValidWordCount) "✅ 12 words detected" else "${words.size} / 12 words",
+                        text = if (isValidWordCount) "12 words detected (valid phrase)" else "${words.size} / 12 words",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isValidWordCount) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
@@ -191,7 +200,13 @@ fun VaultUnlockDialog(
                             }
                         }
                     ) {
-                        Text("🔓 Unlock")
+                        Icon(
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Unlock")
                     }
                 }
             }

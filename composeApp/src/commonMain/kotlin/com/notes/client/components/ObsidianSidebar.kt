@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -76,13 +81,21 @@ fun ObsidianSidebar(
                         onClick = onCreateFolder,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Text("📁+", style = MaterialTheme.typography.labelSmall)
+                        Icon(
+                            imageVector = Icons.Default.CreateNewFolder,
+                            contentDescription = "New Folder",
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     IconButton(
                         onClick = onCollapse,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Text("◀", style = MaterialTheme.typography.labelSmall)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Collapse Sidebar",
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -266,9 +279,11 @@ private fun NoteTreeRow(
                 .padding(horizontal = 8.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (note.type == com.notes.common.models.NoteType.CANVAS) "🎨" else "📝",
-                modifier = Modifier.padding(end = 8.dp)
+            Icon(
+                imageVector = if (note.type == com.notes.common.models.NoteType.CANVAS) Icons.Default.Brush else Icons.AutoMirrored.Filled.Article,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp).padding(end = 4.dp),
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = note.title.ifBlank { "Untitled" },

@@ -2,6 +2,14 @@ package com.notes.client.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,11 +77,17 @@ fun SettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
-                            text = "⚙️ System Configuration",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = "System Configuration",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         Text(
                             text = "Authenticated user: ${profile?.email ?: "Local User"}",
                             style = MaterialTheme.typography.bodySmall,
@@ -95,17 +109,41 @@ fun SettingsDialog(
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        text = { Text("☁️ Cloud Profile & Storage") }
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("Cloud Profile & Storage")
+                            }
+                        }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        text = { Text("💻 Device & Hardware Settings") }
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.Computer, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("Device & Hardware")
+                            }
+                        }
                     )
                     Tab(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
-                        text = { Text("🤖 AI Providers") }
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("AI Providers")
+                            }
+                        }
                     )
                 }
 
@@ -194,7 +232,9 @@ fun SettingsDialog(
                                     onClick = onOpenStorageVault,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("🗄️ Inspect Sandboxed Vault & Index")
+                                    Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Inspect Sandboxed Vault & Index")
                                 }
                             }
 
@@ -211,7 +251,7 @@ fun SettingsDialog(
                                         enabledModules = enabledModules.toList()
                                     )
                                     authManager.updateCloudConfig(updated)
-                                    cloudSaveStatus = "✅ Cloud configuration saved successfully!"
+                                    cloudSaveStatus = "Cloud configuration saved successfully!"
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -225,11 +265,17 @@ fun SettingsDialog(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Text(
-                                    text = "🔒 Hardware settings are stored only on this physical device and never uploaded to cloud.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = "Hardware settings are stored only on this physical device and never uploaded to cloud.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
 
                                 if (deviceSaveStatus != null) {
                                     Text(
@@ -280,7 +326,7 @@ fun SettingsDialog(
                                             localCacheDirectory = localCacheDir
                                         )
                                         deviceSettingsDriver.saveDeviceModuleConfig(updatedDevice)
-                                        deviceSaveStatus = "✅ Device settings saved to local hardware storage!"
+                                        deviceSaveStatus = "Device settings saved to local hardware storage!"
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -374,10 +420,10 @@ fun AiProviderSettingsView(
                 val isSelected = selectedProviderType == providerType
                 val isActive = activeProvider == providerType
                 val label = when (providerType) {
-                    AiProviderType.GEMINI -> "✨ Gemini"
-                    AiProviderType.OPENAI -> "🟢 OpenAI"
-                    AiProviderType.ANTHROPIC -> "🟣 Claude"
-                    AiProviderType.LOCAL_SERVER -> "🖥️ Local LLM"
+                    AiProviderType.GEMINI -> "Gemini"
+                    AiProviderType.OPENAI -> "OpenAI"
+                    AiProviderType.ANTHROPIC -> "Claude"
+                    AiProviderType.LOCAL_SERVER -> "Local LLM"
                 }
                 FilterChip(
                     selected = isSelected,
@@ -410,12 +456,12 @@ fun AiProviderSettingsView(
             ) {
                 Column {
                     Text(
-                        text = if (activeProvider == selectedProviderType) "⭐ Current Default Provider" else "Inactive for Note Actions",
+                        text = if (activeProvider == selectedProviderType) "Default Provider" else "Inactive for Note Actions",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Used when triggering [✨ AI Metadata] from editor or sidebar.",
+                        text = "Used when triggering AI Metadata from editor or sidebar.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -676,7 +722,26 @@ fun AiProviderSettingsView(
                         },
                         enabled = !isTestingConnection
                     ) {
-                        Text(if (isTestingConnection) "⏳ Testing..." else "⚡ Test Connection")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (isTestingConnection) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Text("Testing...")
+                            } else {
+                                Icon(
+                                    Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text("Test Connection")
+                            }
+                        }
                     }
 
                     connectionTestResult?.let { res ->
@@ -684,13 +749,13 @@ fun AiProviderSettingsView(
                             Triple(
                                 MaterialTheme.colorScheme.primaryContainer,
                                 MaterialTheme.colorScheme.onPrimaryContainer,
-                                "✅ Connected (${res.latencyMs}ms) — Model ready"
+                                "Connected (${res.latencyMs}ms) — Model ready"
                             )
                         } else {
                             Triple(
                                 MaterialTheme.colorScheme.errorContainer,
                                 MaterialTheme.colorScheme.onErrorContainer,
-                                "❌ Failed: ${res.errorMessage ?: "Unknown error"}"
+                                "Failed: ${res.errorMessage ?: "Unknown error"}"
                             )
                         }
                         Surface(
@@ -763,7 +828,7 @@ fun AiProviderSettingsView(
                         authManager.updateCloudConfig(updatedCloud)
                     }
                 }
-                aiSaveStatus = "✅ AI Configuration saved successfully!"
+                aiSaveStatus = "AI Configuration saved successfully!"
             },
             modifier = Modifier.fillMaxWidth()
         ) {

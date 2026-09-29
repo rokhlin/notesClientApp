@@ -3,6 +3,10 @@ package com.notes.client.crypto
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +43,12 @@ fun ProtectedNoteBarrier(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("🛡️", style = MaterialTheme.typography.displayMedium)
+            Icon(
+                imageVector = Icons.Default.Security,
+                contentDescription = "Protected",
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Protected Note: ${note.title}",
@@ -57,7 +66,14 @@ fun ProtectedNoteBarrier(
                 Spacer(modifier = Modifier.height(8.dp))
                 AssistChip(
                     onClick = {},
-                    label = { Text("💡 Hint: $passwordHint") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    label = { Text("Hint: $passwordHint") },
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         labelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -115,7 +131,13 @@ fun ProtectedNoteBarrier(
                 enabled = enteredPassword.isNotBlank(),
                 modifier = Modifier.width(200.dp)
             ) {
-                Text("🔓 Unlock Note")
+                Icon(
+                    imageVector = Icons.Default.LockOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Unlock Note")
             }
         }
     }

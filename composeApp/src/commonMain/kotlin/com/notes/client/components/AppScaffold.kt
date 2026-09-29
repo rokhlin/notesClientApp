@@ -1,6 +1,10 @@
 package com.notes.client.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,19 +40,19 @@ fun AppScaffold(
                     NavigationRailItem(
                         selected = currentRoute == "notes",
                         onClick = { onNavigate("notes") },
-                        icon = { Text("📝") },
+                        icon = { Icon(Icons.AutoMirrored.Filled.Article, contentDescription = "Notes") },
                         label = { Text("Notes") }
                     )
                     NavigationRailItem(
                         selected = currentRoute == "canvas",
                         onClick = { onNavigate("canvas") },
-                        icon = { Text("🎨") },
+                        icon = { Icon(Icons.Default.Brush, contentDescription = "Canvas") },
                         label = { Text("Canvas") }
                     )
                     NavigationRailItem(
                         selected = currentRoute == "settings",
                         onClick = { onNavigate("settings") },
-                        icon = { Text("⚙️") },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                         label = { Text("Settings") }
                     )
                 }
@@ -83,19 +87,19 @@ fun AppScaffold(
                         NavigationBarItem(
                             selected = currentRoute == "notes",
                             onClick = { onNavigate("notes") },
-                            icon = { Text("📝") },
+                            icon = { Icon(Icons.AutoMirrored.Filled.Article, contentDescription = "Notes") },
                             label = { Text("Notes") }
                         )
                         NavigationBarItem(
                             selected = currentRoute == "canvas",
                             onClick = { onNavigate("canvas") },
-                            icon = { Text("🎨") },
+                            icon = { Icon(Icons.Default.Brush, contentDescription = "Canvas") },
                             label = { Text("Canvas") }
                         )
                         NavigationBarItem(
                             selected = currentRoute == "settings",
                             onClick = { onNavigate("settings") },
-                            icon = { Text("⚙️") },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                             label = { Text("Settings") }
                         )
                     }

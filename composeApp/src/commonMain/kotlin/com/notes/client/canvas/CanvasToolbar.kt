@@ -6,12 +6,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.notes.client.canvas.instruments.BrushConfig
@@ -56,31 +61,31 @@ fun CanvasToolbar(
         ) {
             // 1. Tool Selection Group
             ToolButton(
-                icon = "🖊️",
+                icon = Icons.Default.Edit,
                 label = "Pen",
                 isSelected = currentBrush.toolType == ToolType.PEN,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.PEN, currentBrush.color, currentBrush.baseWidth)) }
             )
             ToolButton(
-                icon = "✒️",
+                icon = Icons.Default.Create,
                 label = "Fountain",
                 isSelected = currentBrush.toolType == ToolType.FOUNTAIN_PEN,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.FOUNTAIN_PEN, currentBrush.color, currentBrush.baseWidth)) }
             )
             ToolButton(
-                icon = "✏️",
+                icon = Icons.Default.ModeEdit,
                 label = "Pencil",
                 isSelected = currentBrush.toolType == ToolType.PENCIL,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.PENCIL, currentBrush.color, currentBrush.baseWidth)) }
             )
             ToolButton(
-                icon = "🖌️",
+                icon = Icons.Default.Brush,
                 label = "Brush",
                 isSelected = currentBrush.toolType == ToolType.CALLIGRAPHY_BRUSH,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.CALLIGRAPHY_BRUSH, currentBrush.color, currentBrush.baseWidth)) }
             )
             ToolButton(
-                icon = "🖍️",
+                icon = Icons.Default.Highlight,
                 label = "Highlight",
                 isSelected = currentBrush.toolType == ToolType.HIGHLIGHTER,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.HIGHLIGHTER, currentBrush.color, currentBrush.baseWidth)) }
@@ -89,7 +94,7 @@ fun CanvasToolbar(
             // Shape Insertion Tool
             Box {
                 ToolButton(
-                    icon = "🔷",
+                    icon = Icons.Default.Category,
                     label = "Shapes",
                     isSelected = showShapesMenu,
                     onClick = { showShapesMenu = !showShapesMenu }
@@ -100,35 +105,40 @@ fun CanvasToolbar(
                     onDismissRequest = { showShapesMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("📏 Straight Line") },
+                        text = { Text("Straight Line") },
+                        leadingIcon = { Icon(Icons.Default.HorizontalRule, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showShapesMenu = false
                             onInsertShape?.invoke(RecognizedShapeType.STRAIGHT_LINE)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("▭ Rectangle") },
+                        text = { Text("Rectangle") },
+                        leadingIcon = { Icon(Icons.Default.CropSquare, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showShapesMenu = false
                             onInsertShape?.invoke(RecognizedShapeType.RECTANGLE)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("◯ Circle") },
+                        text = { Text("Circle") },
+                        leadingIcon = { Icon(Icons.Default.RadioButtonUnchecked, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showShapesMenu = false
                             onInsertShape?.invoke(RecognizedShapeType.CIRCLE)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("⬭ Ellipse") },
+                        text = { Text("Ellipse") },
+                        leadingIcon = { Icon(Icons.Default.Egg, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showShapesMenu = false
                             onInsertShape?.invoke(RecognizedShapeType.ELLIPSE)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("△ Triangle") },
+                        text = { Text("Triangle") },
+                        leadingIcon = { Icon(Icons.Default.ChangeHistory, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         onClick = {
                             showShapesMenu = false
                             onInsertShape?.invoke(RecognizedShapeType.TRIANGLE)
@@ -138,7 +148,7 @@ fun CanvasToolbar(
             }
 
             ToolButton(
-                icon = "🧹",
+                icon = Icons.Default.AutoFixNormal,
                 label = "Eraser",
                 isSelected = currentBrush.toolType == ToolType.VECTOR_ERASER,
                 onClick = { onBrushChange(BrushConfig.defaultFor(ToolType.VECTOR_ERASER, currentBrush.color, currentBrush.baseWidth)) }
@@ -225,20 +235,32 @@ fun CanvasToolbar(
                 enabled = canUndo,
                 modifier = Modifier.size(36.dp)
             ) {
-                Text("↩️", fontSize = 16.sp)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = "Undo",
+                    modifier = Modifier.size(20.dp)
+                )
             }
             IconButton(
                 onClick = onRedo,
                 enabled = canRedo,
                 modifier = Modifier.size(36.dp)
             ) {
-                Text("↪️", fontSize = 16.sp)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Redo,
+                    contentDescription = "Redo",
+                    modifier = Modifier.size(20.dp)
+                )
             }
             IconButton(
                 onClick = onClear,
                 modifier = Modifier.size(36.dp)
             ) {
-                Text("🗑️", fontSize = 16.sp)
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Clear",
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -246,7 +268,7 @@ fun CanvasToolbar(
 
 @Composable
 private fun ToolButton(
-    icon: String,
+    icon: ImageVector,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -264,7 +286,12 @@ private fun ToolButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(icon, fontSize = 18.sp)
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(20.dp),
+            tint = contentColor
+        )
         Text(
             label,
             fontSize = 8.sp,

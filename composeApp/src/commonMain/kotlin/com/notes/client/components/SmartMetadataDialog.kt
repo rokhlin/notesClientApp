@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,9 +58,18 @@ fun SmartMetadataDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                             Text(
-                                text = "✨ Smart Metadata Suggestions",
+                                text = "Smart Metadata Suggestions",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -67,7 +81,7 @@ fun SmartMetadataDialog(
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Text("✕", style = MaterialTheme.typography.titleMedium)
+                        Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
@@ -176,7 +190,11 @@ fun SmartMetadataDialog(
                                         },
                                         label = { Text("#$tag") },
                                         leadingIcon = {
-                                            Text(if (isSelected) "✓" else "＋", style = MaterialTheme.typography.labelMedium)
+                                            if (isSelected) {
+                                                Icon(Icons.Default.Check, contentDescription = "Selected", modifier = Modifier.size(16.dp))
+                                            } else {
+                                                Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(16.dp))
+                                            }
                                         }
                                     )
                                 }

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -303,7 +305,14 @@ fun App() {
                                 )
                                 AssistChip(
                                     onClick = { },
-                                    label = { Text("✏️ Skia Continuous Roll") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Draw,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text("Skia Continuous Roll") },
                                     colors = AssistChipDefaults.assistChipColors(
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                                         labelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -312,7 +321,14 @@ fun App() {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 AssistChip(
                                     onClick = { triggerAiMetadata() },
-                                    label = { Text("✨ AI Metadata") },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text("AI Metadata") },
                                     colors = AssistChipDefaults.assistChipColors(
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                         labelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -322,7 +338,13 @@ fun App() {
                                 FilledTonalButton(
                                     onClick = { showExportCanvasDialog = true }
                                 ) {
-                                    Text("📤 Export")
+                                    Icon(
+                                        Icons.Default.Share,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Export")
                                 }
                             }
 
@@ -445,7 +467,14 @@ fun App() {
                                             unlockedNoteIds = unlockedNoteIds - currentNote.id
                                         }
                                     },
-                                    label = { Text(if (isUnlocked) "🔒 Re-Lock" else "🛡️ Protected") },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (isUnlocked) Icons.Default.Lock else Icons.Default.Security,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text(if (isUnlocked) "Re-Lock" else "Protected") },
                                     colors = AssistChipDefaults.assistChipColors(
                                         containerColor = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
                                         labelColor = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
@@ -454,7 +483,14 @@ fun App() {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 AssistChip(
                                     onClick = {},
-                                    label = { Text("⚡ No Collab") }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text("No Collab") }
                                 )
                             }
 
@@ -468,13 +504,27 @@ fun App() {
                                             showUnlockVaultDialog = true
                                         }
                                     },
-                                    label = { Text(if (isVaultUnlocked) "🔓 Vault Unlocked" else "🔒 Encrypted Note") }
+                                    leadingIcon = {
+                                        Icon(
+                                            if (isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text(if (isVaultUnlocked) "Vault Unlocked" else "Encrypted Note") }
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             AssistChip(
                                 onClick = { triggerAiMetadata() },
-                                label = { Text("✨ AI Metadata") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                label = { Text("AI Metadata") },
                                 colors = AssistChipDefaults.assistChipColors(
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                     labelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -486,11 +536,22 @@ fun App() {
                                 onClick = { isEditMode = !isEditMode },
                                 enabled = (!currentNote.isEncrypted || isVaultUnlocked) && (!currentNote.isProtected || unlockedNoteIds.contains(currentNote.id))
                             ) {
-                                Text(
-                                    text = if (isEditMode) "👁️ View (${currentEngine.displayName})" else "✏️ Edit Source",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = if (isEditMode) "View (${currentEngine.displayName})" else "Edit Source",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
 
@@ -517,7 +578,12 @@ fun App() {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("🔒", style = MaterialTheme.typography.displaySmall)
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Encrypted Note",
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.outline
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text("Zero-Knowledge Encrypted Note", style = MaterialTheme.typography.titleLarge)
                                     Spacer(modifier = Modifier.height(6.dp))
@@ -528,7 +594,13 @@ fun App() {
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Button(onClick = { showUnlockVaultDialog = true }) {
-                                        Text("🔓 Unlock Note")
+                                        Icon(
+                                            imageVector = Icons.Default.LockOpen,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Unlock Note")
                                     }
                                 }
                             }
@@ -620,7 +692,7 @@ fun App() {
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "⚡ Welcome to NotesAlltogether",
+                            text = "Welcome to NotesAlltogether",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -630,7 +702,7 @@ fun App() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         PrimaryButton(
-                            text = "＋ Create Note",
+                            text = "Create Note",
                             onClick = { showAddDialog = true }
                         )
                     }
@@ -771,7 +843,15 @@ fun App() {
             AlertDialog(
                 onDismissRequest = { /* Modal in-progress */ },
                 confirmButton = {},
-                title = { Text("✨ Analyzing Note Context") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Text("Analyzing Note Context")
+                    }
+                },
                 text = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -810,7 +890,15 @@ fun App() {
                     showPrivacyWarningDialog = false
                     privacyWarningPendingAction = null
                 },
-                title = { Text("🛡️ Privacy & Confidentiality Notice") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Text("Privacy & Confidentiality Notice")
+                    }
+                },
                 text = {
                     Text("This note is designated as protected or encrypted. Requesting AI suggestions will transmit the sanitized note context to the external cloud provider (${aiSettings.activeProvider.name}).\n\nDo you want to proceed with transmission?")
                 },

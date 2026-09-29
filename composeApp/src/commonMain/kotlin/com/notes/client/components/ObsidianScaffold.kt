@@ -5,6 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,15 +66,15 @@ fun ObsidianScaffold(
                         },
                         navigationIcon = {
                             IconButton(onClick = { isLeftSidebarOpen = !isLeftSidebarOpen }) {
-                                Text("📁")
+                                Icon(Icons.Default.Folder, contentDescription = "Vault")
                             }
                         },
                         actions = {
                             IconButton(onClick = { isQuickSwitcherOpen = true }) {
-                                Text("🔍")
+                                Icon(Icons.Default.Search, contentDescription = "Search")
                             }
                             IconButton(onClick = onToggleTheme) {
-                                Text(if (isDarkTheme) "☀️" else "🌙")
+                                Icon(if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = "Toggle Theme")
                             }
                         }
                     )
@@ -83,19 +87,19 @@ fun ObsidianScaffold(
                                 activeLeftTab = ObsidianSidebarTab.FILES
                                 isLeftSidebarOpen = true
                             },
-                            icon = { Text("📁") },
+                            icon = { Icon(Icons.Default.Folder, contentDescription = "Vault") },
                             label = { Text("Vault") }
                         )
                         NavigationBarItem(
                             selected = false,
                             onClick = { isQuickSwitcherOpen = true },
-                            icon = { Text("🔍") },
+                            icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                             label = { Text("Search") }
                         )
                         NavigationBarItem(
                             selected = false,
                             onClick = onOpenSettings,
-                            icon = { Text("⚙️") },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                             label = { Text("Settings") }
                         )
                     }
@@ -199,7 +203,7 @@ fun ObsidianScaffold(
                                         onClick = { isLeftSidebarOpen = true },
                                         modifier = Modifier.size(32.dp).padding(end = 6.dp)
                                     ) {
-                                        Text("☰", style = MaterialTheme.typography.labelMedium)
+                                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar", modifier = Modifier.size(18.dp))
                                     }
                                 }
 
@@ -287,7 +291,7 @@ fun ObsidianScaffold(
                                     onClick = { isRightSidebarOpen = !isRightSidebarOpen },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Text("📖", style = MaterialTheme.typography.labelMedium)
+                                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Outline & Info", modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
@@ -339,7 +343,7 @@ fun ObsidianScaffold(
                                     onClick = { isRightSidebarOpen = false },
                                     modifier = Modifier.size(28.dp)
                                 ) {
-                                    Text("▶", style = MaterialTheme.typography.labelSmall)
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Close Sidebar", modifier = Modifier.size(16.dp))
                                 }
                             }
 
@@ -387,7 +391,13 @@ fun ObsidianScaffold(
                                     modifier = Modifier.fillMaxWidth(),
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text("✨ Auto-Fill Metadata", style = MaterialTheme.typography.labelSmall)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Text("Auto-Fill Metadata", style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
                             }
 
@@ -414,12 +424,23 @@ fun ObsidianScaffold(
                                             )
                                         ) {
                                             Column(modifier = Modifier.padding(8.dp)) {
-                                                Text(
-                                                    text = "🔗 " + backlink.sourceNoteTitle,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Link,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp),
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Text(
+                                                        text = backlink.sourceNoteTitle,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
                                                 Text(
                                                     text = backlink.snippet,
                                                     style = MaterialTheme.typography.bodySmall,

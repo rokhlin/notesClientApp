@@ -2,6 +2,14 @@ package com.notes.client.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,9 +68,10 @@ fun ObsidianRibbon(
                         }
                     )
                 ) {
-                    Text(
-                        text = "📁",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = "Vault Files",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -71,9 +80,10 @@ fun ObsidianRibbon(
                     onClick = onOpenQuickSwitcher,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Text(
-                        text = "🔍",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Quick Switcher",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -89,9 +99,10 @@ fun ObsidianRibbon(
                         }
                     )
                 ) {
-                    Text(
-                        text = "🏷️",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Sell,
+                        contentDescription = "Tags Hierarchy",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -107,9 +118,10 @@ fun ObsidianRibbon(
                         }
                     )
                 ) {
-                    Text(
-                        text = "⭐",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Bookmark,
+                        contentDescription = "Bookmarks",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -129,9 +141,10 @@ fun ObsidianRibbon(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(
-                        text = "＋",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Create New Note",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -146,9 +159,10 @@ fun ObsidianRibbon(
                     onClick = onToggleTheme,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Text(
-                        text = "🌓",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Brightness4,
+                        contentDescription = "Toggle Theme",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -157,9 +171,10 @@ fun ObsidianRibbon(
                     onClick = onOpenSettings,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Text(
-                        text = "⚙️",
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }

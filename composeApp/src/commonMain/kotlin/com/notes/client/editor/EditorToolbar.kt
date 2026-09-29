@@ -6,10 +6,16 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -96,10 +102,9 @@ fun EditorToolbar(
 
             // Structure Group
             ToolbarButton(
-                label = "”",
+                label = "\"",
+                icon = Icons.Default.FormatQuote,
                 title = "Blockquote",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
                 onClick = { onValueChange(MarkdownFormatter.applyBlockquote(value)) }
             )
             ToolbarButton(
@@ -109,9 +114,9 @@ fun EditorToolbar(
                 onClick = { onValueChange(MarkdownFormatter.applyCodeBlock(value)) }
             )
             ToolbarButton(
-                label = "⊞",
+                label = "Table",
+                icon = Icons.Default.TableChart,
                 title = "Markdown Table",
-                fontSize = 16.sp,
                 onClick = { onValueChange(MarkdownFormatter.applyTable(value)) }
             )
             ToolbarButton(
@@ -132,9 +137,9 @@ fun EditorToolbar(
                 onClick = { onValueChange(MarkdownFormatter.applyBulletList(value)) }
             )
             ToolbarButton(
-                label = "☑",
+                label = "Tasks",
+                icon = Icons.Default.CheckBox,
                 title = "Task List",
-                fontSize = 15.sp,
                 onClick = { onValueChange(MarkdownFormatter.applyTaskList(value)) }
             )
 
@@ -148,9 +153,9 @@ fun EditorToolbar(
                 onClick = { onValueChange(MarkdownFormatter.applyWikilink(value)) }
             )
             ToolbarButton(
-                label = "🔗",
+                label = "Link",
+                icon = Icons.Default.Link,
                 title = "Web Link",
-                fontSize = 13.sp,
                 onClick = { onValueChange(MarkdownFormatter.applyWebLink(value)) }
             )
             ToolbarButton(
@@ -169,6 +174,7 @@ private fun ToolbarButton(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     fontWeight: FontWeight? = null,
     fontStyle: FontStyle? = null,
     fontFamily: FontFamily? = null,
@@ -187,14 +193,22 @@ private fun ToolbarButton(
         ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Text(
-            text = label,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            fontStyle = fontStyle,
-            fontFamily = fontFamily,
-            textDecoration = textDecoration
-        )
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                modifier = Modifier.size(16.dp)
+            )
+        } else {
+            Text(
+                text = label,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                fontStyle = fontStyle,
+                fontFamily = fontFamily,
+                textDecoration = textDecoration
+            )
+        }
     }
 }
 
