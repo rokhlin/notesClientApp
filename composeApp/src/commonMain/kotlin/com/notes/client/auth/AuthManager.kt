@@ -9,7 +9,7 @@ import com.notes.common.models.UserCloudConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.UUID
+import com.notes.client.util.currentTimeMillis
 
 sealed interface SessionState {
     object Unauthenticated : SessionState
@@ -93,7 +93,7 @@ class AuthManager(
     fun updateCloudConfig(newConfig: UserCloudConfig): UserCloudConfig {
         val state = _sessionState.value
         if (state is SessionState.Authenticated) {
-            val updated = newConfig.copy(userId = state.profile.userId, updatedAt = System.currentTimeMillis())
+            val updated = newConfig.copy(userId = state.profile.userId, updatedAt = currentTimeMillis())
             _sessionState.value = state.copy(cloudConfig = updated)
             return updated
         }
@@ -114,7 +114,7 @@ class AuthManager(
                     syncIntervalSeconds = 30
                 ),
                 enabledModules = listOf("core-editor", "skia-canvas"),
-                updatedAt = System.currentTimeMillis()
+                updatedAt = currentTimeMillis()
             )
         }
     }

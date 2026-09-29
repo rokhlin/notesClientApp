@@ -1,7 +1,7 @@
 package com.notes.client.ai
 
 import com.notes.common.models.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class MockHttpTransport(
@@ -98,7 +98,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testGeminiHappyPathExecution() = runBlocking {
+    fun testGeminiHappyPathExecution() = runTest {
         val mockTransport = MockHttpTransport { url, _, _, _ ->
             assertTrue(url.contains("gemini-3.5-flash"))
             HttpResponseData(
@@ -137,7 +137,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testGeminiAutoFailoverTo38FlashOn404() = runBlocking {
+    fun testGeminiAutoFailoverTo38FlashOn404() = runTest {
         val mockTransport = MockHttpTransport { url, _, _, _ ->
             if (url.contains("gemini-3.5-flash")) {
                 // Primary is deprecated or 404
@@ -185,7 +185,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testOpenAiExecution() = runBlocking {
+    fun testOpenAiExecution() = runTest {
         val mockTransport = MockHttpTransport { _, _, headers, _ ->
             assertEquals("Bearer test-openai-key", headers["Authorization"])
             HttpResponseData(
@@ -217,7 +217,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testAnthropicExecution() = runBlocking {
+    fun testAnthropicExecution() = runTest {
         val mockTransport = MockHttpTransport { _, _, headers, _ ->
             assertEquals("test-anthropic-key", headers["x-api-key"])
             HttpResponseData(
@@ -248,7 +248,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testLocalOllamaExecutionAndDiscovery() = runBlocking {
+    fun testLocalOllamaExecutionAndDiscovery() = runTest {
         val mockTransport = MockHttpTransport { url, _, _, _ ->
             if (url.endsWith("/api/tags")) {
                 HttpResponseData(
@@ -295,7 +295,7 @@ class AiServiceTest {
     }
 
     @Test
-    fun testConnectionTestResults() = runBlocking {
+    fun testConnectionTestResults() = runTest {
         // Success test
         val mockSuccess = MockHttpTransport { _, _, _, _ ->
             HttpResponseData(statusCode = 200, body = "{\"models\": []}")

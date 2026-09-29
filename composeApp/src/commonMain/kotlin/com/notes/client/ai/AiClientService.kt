@@ -1,6 +1,7 @@
 package com.notes.client.ai
 
 import com.notes.common.models.*
+import com.notes.client.util.currentTimeMillis
 import kotlinx.serialization.json.*
 
 interface AiClientService {
@@ -19,7 +20,7 @@ class DefaultAiClientService(
     }
 
     override suspend fun testConnection(config: AiProviderConfig): ConnectionTestResult {
-        val startTime = System.currentTimeMillis()
+        val startTime = currentTimeMillis()
         return try {
             when (config.providerType) {
                 AiProviderType.GEMINI -> testGeminiConnection(config, startTime)
@@ -30,7 +31,7 @@ class DefaultAiClientService(
         } catch (e: Exception) {
             ConnectionTestResult(
                 isSuccess = false,
-                latencyMs = System.currentTimeMillis() - startTime,
+                latencyMs = currentTimeMillis() - startTime,
                 errorMessage = e.message ?: "Connection failed"
             )
         }
@@ -335,7 +336,7 @@ class DefaultAiClientService(
         val cleanBaseUrl = config.baseUrl.trim().removeSuffix("/")
         val url = "$cleanBaseUrl/v1beta/models?key=${config.apiKey.trim()}"
         val resp = httpTransport.execute(url = url, method = "GET")
-        val latency = System.currentTimeMillis() - startTime
+        val latency = currentTimeMillis() - startTime
 
         return if (resp.statusCode in 200..299) {
             ConnectionTestResult(
@@ -359,7 +360,7 @@ class DefaultAiClientService(
         if (config.apiKey.isNotBlank()) headers["Authorization"] = "Bearer ${config.apiKey.trim()}"
 
         val resp = httpTransport.execute(url = url, method = "GET", headers = headers)
-        val latency = System.currentTimeMillis() - startTime
+        val latency = currentTimeMillis() - startTime
 
         return if (resp.statusCode in 200..299) {
             ConnectionTestResult(isSuccess = true, latencyMs = latency, modelName = config.primaryModelId)
@@ -372,9 +373,9 @@ class DefaultAiClientService(
         if (config.apiKey.isBlank()) {
             return ConnectionTestResult(isSuccess = false, errorMessage = "Anthropic API key cannot be empty")
         }
-        val startTimeMs = System.currentTimeMillis()
+        val startTimeMs = currentTimeMillis()
         val testRes = dispatchAnthropicRequest(config, config.primaryModelId, "Test connection", "ping")
-        val latency = System.currentTimeMillis() - startTimeMs
+        val latency = currentTimeMillis() - startTimeMs
 
         return if (testRes.statusCode in 200..299) {
             ConnectionTestResult(isSuccess = true, latencyMs = latency, modelName = config.primaryModelId)
@@ -391,7 +392,7 @@ class DefaultAiClientService(
             "$baseUrl/v1/models"
         }
         val resp = httpTransport.execute(url = testUrl, method = "GET")
-        val latency = System.currentTimeMillis() - startTime
+        val latency = currentTimeMillis() - startTime
 
         return if (resp.statusCode in 200..299) {
             ConnectionTestResult(isSuccess = true, latencyMs = latency, modelName = config.primaryModelId)

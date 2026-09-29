@@ -1,9 +1,9 @@
 package com.notes.client.storage
 
+import com.notes.client.util.currentTimeMillis
 import com.notes.common.models.AiSettingsConfig
 import com.notes.common.models.DeviceLocalModuleConfig
 import kotlinx.serialization.json.Json
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Driver for Tier 2 Device-Local Module Runtime Settings.
@@ -18,30 +18,30 @@ class DeviceSettingsDriver(
         encodeDefaults = true
     }
 
-    private val cachedConfigs = ConcurrentHashMap<String, DeviceLocalModuleConfig>()
+    private val cachedConfigs = mutableMapOf<String, DeviceLocalModuleConfig>()
 
     companion object {
         fun moduleConfigPath(moduleId: String): String = "device_modules/module_$moduleId.json"
     }
 
     fun getDeviceModuleConfig(moduleId: String): DeviceLocalModuleConfig {
-        return cachedConfigs.computeIfAbsent(moduleId) { id ->
-            val path = moduleConfigPath(id)
+        return cachedConfigs.getOrPut(moduleId) {
+            val path = moduleConfigPath(moduleId)
             val text = storageDriver.readText(path)
             if (!text.isNullOrBlank()) {
                 runCatching {
                     json.decodeFromString(DeviceLocalModuleConfig.serializer(), text)
                 }.getOrElse {
-                    createDefault(id)
+                    createDefault(moduleId)
                 }
             } else {
-                createDefault(id)
+                createDefault(moduleId)
             }
         }
     }
 
     fun saveDeviceModuleConfig(config: DeviceLocalModuleConfig) {
-        val updated = config.copy(lastUpdated = System.currentTimeMillis())
+        val updated = config.copy(lastUpdated = currentTimeMillis())
         cachedConfigs[config.moduleId] = updated
         val path = moduleConfigPath(config.moduleId)
         val text = json.encodeToString(DeviceLocalModuleConfig.serializer(), updated)
@@ -73,7 +73,7 @@ class DeviceSettingsDriver(
             localCacheDirectory = "cache/$moduleId",
             maxLocalCacheBytes = 524_288_000L,
             deviceDensityScale = 1.0f,
-            lastUpdated = System.currentTimeMillis()
+            lastUpdated = currentTimeMillis()
         )
     }
 }

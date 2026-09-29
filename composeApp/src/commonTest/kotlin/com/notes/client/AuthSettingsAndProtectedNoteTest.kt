@@ -11,6 +11,7 @@ import com.notes.common.models.NoteType
 import com.notes.common.models.StorageBackendType
 import com.notes.common.models.StoragePathConfig
 import com.notes.common.models.UserCloudConfig
+import com.notes.client.util.currentTimeMillis
 import kotlin.test.*
 
 class AuthSettingsAndProtectedNoteTest {
@@ -168,7 +169,7 @@ class AuthSettingsAndProtectedNoteTest {
         val secret = "sec_test_secret_for_user_12345"
         val method = "PUT"
         val path = "/api/v1/user/config"
-        val timestamp = System.currentTimeMillis()
+        val timestamp = currentTimeMillis()
         val nonce = "nonce_random_abc_123"
         val body = """{"userId":"usr_123","email":"test@notes.com"}"""
         val bodyHash = HmacSignatureEngine.computeBodyHash(body)
