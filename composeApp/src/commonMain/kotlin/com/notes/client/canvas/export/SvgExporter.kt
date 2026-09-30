@@ -121,6 +121,40 @@ object SvgExporter {
                 }
             }
 
+            // Render shapes
+            for (shape in layer.shapes) {
+                val color = escapeXml(shape.colorHex)
+                val sw = formatCoord(shape.strokeWidth)
+                val dashAttr = if (shape.lineStyle == "DASHED") " stroke-dasharray=\"12,10\"" else ""
+                val hw = kotlin.math.abs(shape.width) / 2f
+                val hh = kotlin.math.abs(shape.height) / 2f
+                when (shape.type) {
+                    "STRAIGHT_LINE" -> {
+                        sb.appendLine("    <line x1=\"${formatCoord(shape.x - hw)}\" y1=\"${formatCoord(shape.y - hh)}\" x2=\"${formatCoord(shape.x + hw)}\" y2=\"${formatCoord(shape.y + hh)}\" stroke=\"$color\" stroke-width=\"$sw\"$dashAttr stroke-linecap=\"round\" />")
+                    }
+                    "RECTANGLE" -> {
+                        sb.appendLine("    <rect x=\"${formatCoord(shape.x - hw)}\" y=\"${formatCoord(shape.y - hh)}\" width=\"${formatCoord(shape.width)}\" height=\"${formatCoord(shape.height)}\" fill=\"none\" stroke=\"$color\" stroke-width=\"$sw\"$dashAttr />")
+                    }
+                    "CIRCLE" -> {
+                        sb.appendLine("    <circle cx=\"${formatCoord(shape.x)}\" cy=\"${formatCoord(shape.y)}\" r=\"${formatCoord(hw)}\" fill=\"none\" stroke=\"$color\" stroke-width=\"$sw\"$dashAttr />")
+                    }
+                    "ELLIPSE" -> {
+                        sb.appendLine("    <ellipse cx=\"${formatCoord(shape.x)}\" cy=\"${formatCoord(shape.y)}\" rx=\"${formatCoord(hw)}\" ry=\"${formatCoord(hh)}\" fill=\"none\" stroke=\"$color\" stroke-width=\"$sw\"$dashAttr />")
+                    }
+                    "TRIANGLE" -> {
+                        val pts = "${formatCoord(shape.x)},${formatCoord(shape.y - hh)} ${formatCoord(shape.x + hw)},${formatCoord(shape.y + hh)} ${formatCoord(shape.x - hw)},${formatCoord(shape.y + hh)}"
+                        sb.appendLine("    <polygon points=\"$pts\" fill=\"none\" stroke=\"$color\" stroke-width=\"$sw\"$dashAttr />")
+                    }
+                }
+            }
+
+            // Render text boxes
+            for (tb in layer.textBoxes) {
+                val color = escapeXml(tb.colorHex)
+                val fs = formatCoord(tb.fontSize)
+                sb.appendLine("    <text x=\"${formatCoord(tb.x)}\" y=\"${formatCoord(tb.y + tb.fontSize)}\" font-size=\"$fs\" fill=\"$color\">${escapeXml(tb.text)}</text>")
+            }
+
             sb.appendLine("  </g>")
         }
 

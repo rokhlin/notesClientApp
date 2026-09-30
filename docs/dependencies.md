@@ -102,4 +102,6 @@ Dependencies are organized across architectural domains:
 17. **Design Workflow (Q30):** Material 3 code-first UI without external Figma dependency.
 18. **Multi-Provider AI Architecture (Q31):** Direct client-side connectivity with optional server gateway. Native integration for Google Gemini, OpenAI, Anthropic, and Local LLM Server (Ollama / OpenAI-compatible) configured in System Settings (`SettingsDialog`).
 19. **Contextual Smart Metadata (Q32):** Intelligent note context analysis producing suggested tags, concise document summaries, and descriptive titles with interactive preview and selective user confirmation before atomic note persistence.
+20. **Editor Overhaul & Dedicated Settings (Phase 1.5):** All 12 refactoring tasks utilize native Compose Multiplatform foundational components (`pointerInput`, `detectHorizontalDragGestures`, adaptive layouts, `imePadding`) and internal models without introducing heavy external dependencies.
+
 

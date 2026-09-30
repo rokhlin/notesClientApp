@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Handwritten Notes Editor (Canvas) Overhaul (Samsung Notes benchmark)**:
+  - Standardized Top Header: Active note title with long-press rename trigger and strictly icon-only buttons across mobile and wide desktop layouts.
+  - Viewport Maximization: Reclaimed 100% of vertical canvas space by eliminating bottom navigation.
+  - Horizontally Scrollable Toolbar: Added smooth horizontal scrolling (`Modifier.horizontalScroll`) to `CanvasToolbar` preventing button clipping on narrow devices.
+  - Collapsible Toolbar Toggle: Added a narrow button on the right edge displaying `>` to collapse the panel, and `<` when collapsed (only the narrow button remains visible).
+  - Fixed Stroke Replacement Bug & Monotonic Unique IDs: Disabled automatic shape replacement for freehand pen instruments (`PEN`, `FOUNTAIN_PEN`, `PENCIL`, `CALLIGRAPHY_BRUSH`, `HIGHLIGHTER`). Implemented collision-free IDs (`stroke_${timestamp}_${random}`).
+  - Samsung Notes-Inspired Interactive Shapes:
+    - Shape Placement Mode: User specifies center on touch down, sizes shape in real-time via drag, and commits on finger release.
+    - Long-Press Shape Selection: Activates bounding box, 4 corner resize handles, and touch-drag repositioning.
+    - Floating Action Bar: Dedicated contextual toolbar for shape deletion, color cycling, stroke width (2pt/4pt/8pt), line style (Solid <-> Dashed), and confirmation.
+  - Interactive Text Containers: Added Text Tool (`T`) enabling movable, editable, and resizable text containers (`CanvasTextBox`) on the canvas.
+  - Full SVG and Compound Package Serialization: Updated `SvgExporter` and `CmnPackageSerializer` to export and store shapes and text boxes.
+  - Comprehensive Test Suite: Added `CanvasEditorEnhancementsTest` validating drag shape creation, transformation, text containers, and SVG export.
+- Implemented Minimalist Editor Canvas & Workspace Maximization removing redundant secondary title/chip rows and mobile footer navigation bar to dedicate maximum screen viewport to note content.
+- Added Header Note Title with long-press gesture trigger enabling direct document renaming.
+- Refactored Header Actions: removed search and theme toggle icons, replacing them with context-aware AI Metadata button and Edit/View mode toggle button.
+- Refactored Editor Toolbar with compact 4px element spacing, transparent item backgrounds using panel container background, and dynamic button order/visibility configuration.
+- Added Right-Edge Swipe Gesture (`detectHorizontalDragGestures`) to intuitively summon the right context & actions drawer.
+- Implemented Dedicated Responsive Settings Screen replacing modal dialogs with an adaptive layout (Portrait: drill-down navigation; Landscape/Tablet/Foldable: master-detail side-nav).
+- Added Nested Settings Pages: General (theme, font size, content search index toggle), Vault (Cloud Profile & Storage Paths), AI Providers, and Editor Toolbar customizer.
+- Implemented Editor Toolbar Customizer allowing users to reorder formatting buttons, disable/hide buttons into a reserve bank, and restore defaults or add custom commands.
+- Implemented Dedicated Search Page in left navigation sidebar with query input, clear button, full-text content search checkbox (default ON), and protected note privacy protection (titles & tags only).
+- Refined Protected Note Barrier with `Modifier.imePadding()` and vertical scrolling to prevent mobile keyboard occlusion, enlarged password input, and distinct password hint card.
+- Implemented Note Password Protection Lifecycle: `SetPasswordProtectionDialog` encrypting notes into self-contained `.nap` containers with PBKDF2 check-tags and atomic unencrypted removal, and `RemovePasswordProtectionDialog` restoring plaintext Markdown.
+- Implemented Universal Note Sharing Hub (`NoteSharingDialog`) offering native OS file sharing (.md), collaborative editing web links (`/collab/<noteId>`), and PDF export for proprietary/canvas formats.
 - Implemented Multi-Provider AI Connectivity (`AiClientService`) supporting Google Gemini (with `gemini-3.5-flash` primary and automated failover to `gemini-3.8-flash`), OpenAI (`gpt-4o-mini`), Anthropic Claude (`claude-3-5-haiku-20241022`), and Local LLM Servers (Ollama native & OpenAI-compatible).
 - Added Dynamic Local Model Discovery querying `/api/tags` and `/v1/models` on local server endpoints to auto-populate installed LLM model selectors.
 - Added live Connection Test diagnostic tool (`testConnection`) measuring ping latency and verifying authentication credentials with real-time status pills.

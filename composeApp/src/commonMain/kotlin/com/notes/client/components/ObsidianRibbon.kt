@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 
 enum class ObsidianSidebarTab {
     FILES,
+    SEARCH,
     TAGS,
     BOOKMARKS
 }
@@ -75,14 +76,21 @@ fun ObsidianRibbon(
                     )
                 }
 
-                // Quick Switcher
+                // Search Tab
                 IconButton(
-                    onClick = onOpenQuickSwitcher,
-                    modifier = Modifier.size(44.dp)
+                    onClick = { onTabSelected(ObsidianSidebarTab.SEARCH) },
+                    modifier = Modifier.size(44.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (isSidebarOpen && activeTab == ObsidianSidebarTab.SEARCH) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+                        }
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Quick Switcher",
+                        contentDescription = "Search Notes",
                         modifier = Modifier.size(22.dp)
                     )
                 }

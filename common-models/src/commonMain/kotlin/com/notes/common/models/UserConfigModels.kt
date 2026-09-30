@@ -50,3 +50,23 @@ data class DeviceLocalModuleConfig(
     val deviceDensityScale: Float = 1.0f,
     val lastUpdated: Long = 0L
 )
+
+@Serializable
+data class GeneralSettingsConfig(
+    val theme: String = "DARK", // "DARK", "LIGHT", "SYSTEM"
+    val editorFontSize: Float = 16f,
+    val searchContentEnabled: Boolean = true
+)
+
+@Serializable
+data class ToolbarConfig(
+    val activeButtons: List<String> = listOf(
+        "bold", "italic", "strikethrough", "code",
+        "h1", "h2", "h3",
+        "quote", "codeblock", "table", "math",
+        "bullet", "tasks",
+        "wikilink", "link", "tag"
+    ),
+    val disabledButtons: List<String> = emptyList(),
+    val customCommands: List<String> = emptyList()
+)

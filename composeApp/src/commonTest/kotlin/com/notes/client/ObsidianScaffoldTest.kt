@@ -66,8 +66,9 @@ class ObsidianScaffoldTest {
     @Test
     fun testSidebarTabsEnumeration() {
         val tabs = ObsidianSidebarTab.entries
-        assertEquals(3, tabs.size)
+        assertEquals(4, tabs.size)
         assertTrue(tabs.contains(ObsidianSidebarTab.FILES))
+        assertTrue(tabs.contains(ObsidianSidebarTab.SEARCH))
         assertTrue(tabs.contains(ObsidianSidebarTab.TAGS))
         assertTrue(tabs.contains(ObsidianSidebarTab.BOOKMARKS))
     }

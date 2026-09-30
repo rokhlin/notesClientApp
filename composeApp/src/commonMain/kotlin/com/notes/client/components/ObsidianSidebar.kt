@@ -10,8 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.notes.common.models.Note
 
 /**
@@ -45,6 +45,9 @@ fun ObsidianSidebar(
 
     if (sidebarWidth <= 0.dp) return
 
+    var searchQuery by remember { mutableStateOf("") }
+    var searchContentEnabled by remember { mutableStateOf(true) }
+
     Surface(
         modifier = modifier
             .width(sidebarWidth)
@@ -68,6 +71,7 @@ fun ObsidianSidebar(
                 Text(
                     text = when (activeTab) {
                         ObsidianSidebarTab.FILES -> "Vault Files"
+                        ObsidianSidebarTab.SEARCH -> "Search Notes"
                         ObsidianSidebarTab.TAGS -> "Tags Hierarchy"
                         ObsidianSidebarTab.BOOKMARKS -> "Bookmarks"
                     },
@@ -104,7 +108,7 @@ fun ObsidianSidebar(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
@@ -116,6 +120,11 @@ fun ObsidianSidebar(
                         title = "Files",
                         isSelected = activeTab == ObsidianSidebarTab.FILES,
                         onClick = { onTabSelected(ObsidianSidebarTab.FILES) }
+                    )
+                    TabPill(
+                        title = "Search",
+                        isSelected = activeTab == ObsidianSidebarTab.SEARCH,
+                        onClick = { onTabSelected(ObsidianSidebarTab.SEARCH) }
                     )
                     TabPill(
                         title = "Tags",
@@ -138,6 +147,135 @@ fun ObsidianSidebar(
             // Content Body
             Box(modifier = Modifier.weight(1f)) {
                 when (activeTab) {
+                    ObsidianSidebarTab.SEARCH -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                placeholder = { Text("Search notes...", fontSize = 13.sp) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                                },
+                                trailingIcon = {
+                                    if (searchQuery.isNotBlank()) {
+                                        IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
+                                            Icon(Icons.Default.Clear, contentDescription = "Clear", modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = searchContentEnabled,
+                                    onCheckedChange = { searchContentEnabled = it },
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Search inside content",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            val filteredNotes = remember(searchQuery, searchContentEnabled, notes) {
+                                val q = searchQuery.trim()
+                                if (q.isBlank()) {
+                                    notes
+                                } else {
+                                    notes.filter { note ->
+                                        val matchesTitle = note.title.contains(q, ignoreCase = true)
+                                        val matchesTag = note.tags.any { it.contains(q, ignoreCase = true) }
+                                        val matchesContent = if (searchContentEnabled && !note.isProtected && !note.isEncrypted) {
+                                            note.content.contains(q, ignoreCase = true)
+                                        } else false
+                                        matchesTitle || matchesTag || matchesContent
+                                    }
+                                }
+                            }
+
+                            if (filteredNotes.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "No notes matched \"$searchQuery\"",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    items(filteredNotes) { note ->
+                                        val isSelected = note.id == activeNoteId
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .clickable { onNoteSelected(note) },
+                                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+                                        ) {
+                                            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = if (note.type == com.notes.common.models.NoteType.CANVAS) Icons.Default.Brush else Icons.AutoMirrored.Filled.Article,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = note.title.ifBlank { "Untitled" },
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    if (note.isProtected || note.isEncrypted) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Lock,
+                                                            contentDescription = "Protected",
+                                                            modifier = Modifier.size(12.dp),
+                                                            tint = MaterialTheme.colorScheme.error
+                                                        )
+                                                    }
+                                                }
+                                                if (note.tags.isNotEmpty()) {
+                                                    Row(
+                                                        modifier = Modifier.padding(top = 2.dp),
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        note.tags.take(3).forEach { tag ->
+                                                            Text(
+                                                                text = "#$tag",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     ObsidianSidebarTab.FILES -> {
                         LazyColumn(
                             modifier = Modifier

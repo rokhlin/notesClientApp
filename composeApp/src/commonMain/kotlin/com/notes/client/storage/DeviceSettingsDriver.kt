@@ -65,6 +65,40 @@ class DeviceSettingsDriver(
         storageDriver.writeText(path, text)
     }
 
+    fun getGeneralSettings(): com.notes.common.models.GeneralSettingsConfig {
+        val path = "device_modules/general_settings.json"
+        val text = storageDriver.readText(path)
+        if (!text.isNullOrBlank()) {
+            return runCatching {
+                json.decodeFromString(com.notes.common.models.GeneralSettingsConfig.serializer(), text)
+            }.getOrElse { com.notes.common.models.GeneralSettingsConfig() }
+        }
+        return com.notes.common.models.GeneralSettingsConfig()
+    }
+
+    fun saveGeneralSettings(config: com.notes.common.models.GeneralSettingsConfig) {
+        val path = "device_modules/general_settings.json"
+        val text = json.encodeToString(com.notes.common.models.GeneralSettingsConfig.serializer(), config)
+        storageDriver.writeText(path, text)
+    }
+
+    fun getToolbarConfig(): com.notes.common.models.ToolbarConfig {
+        val path = "device_modules/toolbar_config.json"
+        val text = storageDriver.readText(path)
+        if (!text.isNullOrBlank()) {
+            return runCatching {
+                json.decodeFromString(com.notes.common.models.ToolbarConfig.serializer(), text)
+            }.getOrElse { com.notes.common.models.ToolbarConfig() }
+        }
+        return com.notes.common.models.ToolbarConfig()
+    }
+
+    fun saveToolbarConfig(config: com.notes.common.models.ToolbarConfig) {
+        val path = "device_modules/toolbar_config.json"
+        val text = json.encodeToString(com.notes.common.models.ToolbarConfig.serializer(), config)
+        storageDriver.writeText(path, text)
+    }
+
     private fun createDefault(moduleId: String): DeviceLocalModuleConfig {
         return DeviceLocalModuleConfig(
             moduleId = moduleId,

@@ -117,6 +117,13 @@ sequenceDiagram
     Serializer->>Disk: Write compound .cmn container with CMN\x01 magic header
 ```
 
+### 2.2.1. Interactive Shape Placement & Manipulation (Samsung Notes Benchmark)
+1. **Placement Mode**: Choosing a geometric shape from `CanvasToolbar` arms placement mode. The user touches down to define the shape center anchor point and drags outwardly to dynamically adjust bounds, committing the canonical `CanvasShape` on pointer release.
+2. **Manipulation Mode**: Long-pressing an existing shape invokes selection mode, presenting an accent bounding box, 4 corner resize handles, and touch-drag translation.
+3. **Floating Contextual Action Bar**: Provides instant shape color cycling, stroke width switching (2pt/4pt/8pt), line style toggling (`SOLID` / `DASHED`), and shape deletion.
+4. **Text Containers**: Floating movable `CanvasTextBox` elements with in-place editing, positioning, and deletion.
+5. **Horizontally Scrollable Collapsible Toolbar**: Horizontally scrollable row preventing icon clipping on compact screens, with a narrow right-edge collapse toggle (`>` to collapse, `<` when collapsed).
+
 ### 2.3. End-to-End Encryption (E2EE) Vault Decryption Flow
 ```mermaid
 sequenceDiagram
@@ -327,15 +334,28 @@ The client interacts with `notesServer` through a resilient HTTP and WebSocket g
   - *Error Fallback*: If points $< 3$, renders a straight line segment between available coordinates.
 - **`BrushConfig`**:
   - Encapsulates physical inking characteristics: `minWidth`, `maxWidth`, `pressureSensitivity`, `velocityDamping`, and `instrument` (`PEN`, `FOUNTAIN_PEN`, `PENCIL`, `CALLIGRAPHY_BRUSH`, `HIGHLIGHTER`, `VECTOR_ERASER`).
+  - Freehand drawing preserves natural stroke geometry with monotonic collision-free stroke IDs (`stroke_${timestamp}_${random}`) without accidental shape replacement.
 - **`ShapeRecognizer`**:
   - `classifyShape(points: List<InkPoint>): ShapeClassification`
-  - Mathematical classifier computing aspect ratio, vertex angles, bounding-box aspect, and radial variance from centroid. Classifies `STRAIGHT_LINE`, `RECTANGLE`, `CIRCLE`, `ELLIPSE`, and `TRIANGLE`.
+  - `createPrimitiveFromDrag(type: RecognizedShapeType, start: Offset, current: Offset): SnappedShape`
+  - `canvasShapeToSnapped(shape: CanvasShape): SnappedShape`
+  - Mathematical classifier computing aspect ratio, vertex angles, bounding-box aspect, and radial variance from centroid. Classifies and generates `STRAIGHT_LINE`, `RECTANGLE`, `CIRCLE`, `ELLIPSE`, and `TRIANGLE`.
+- **Samsung Notes-Inspired Shape Manipulation Subsystem**:
+  - **Creation Lifecycle**: Shape Placement Mode allows the user to touch down to establish the center anchor point, drag outwards to preview geometry live, and release to commit into `CanvasLayer.shapes`.
+  - **Selection & Transform**: Long-pressing on any shape triggers object selection with an active bounding box, 4 corner resize handles, and touch-drag repositioning.
+  - **Floating Contextual Toolbar**: Displays adjacent to selected shapes providing quick actions for shape deletion, color palette cycling, stroke thickness toggle (2pt/4pt/8pt), line style toggle (Solid $\leftrightarrow$ Dashed), and completion.
+- **Interactive Canvas Text Containers**:
+  - Dedicated Text Tool (`T`) generating floating `CanvasTextBox` instances.
+  - Supports touch-drag repositioning, multi-line in-place text editing, font sizing, and deletion.
+- **Collapsible & Scrollable `CanvasToolbar`**:
+  - Smooth horizontal scrolling preventing tool clipping on compact or foldable displays.
+  - Integrated narrow collapse button on the right edge (`>` when open to collapse; `<` when collapsed with only the narrow button visible on screen).
 - **`CmnPackageSerializer`**:
   - `serialize(manifest: CmnManifest, layers: List<CanvasLayer>): ByteArray`
-  - Compiles canvas data into the compound `.cmn` container format enforcing the 4-byte magic signature `CMN\x01` (`0x43 0x4D 0x4E 0x01`).
+  - Compiles canvas data into the compound `.cmn` container format enforcing the 4-byte magic signature `CMN\x01` (`0x43 0x4D 0x4E 0x01`). Supports strokes, geometric shapes, and text containers.
 - **`SvgExporter`**:
   - `exportToSvg(layers: List<CanvasLayer>, width: Float, height: Float): String`
-  - Generates standalone, standard W3C SVG XML documents mapping Bézier curves to `<path d="M... C..."/>` elements for loss-less vector printing.
+  - Generates standalone, standard W3C SVG XML documents mapping Bézier curves, `<line>`, `<rect>`, `<circle>`, `<ellipse>`, `<polygon>` (with solid and dashed path effects), and `<text>` elements.
 
 ### 4.2. Markdown & PKM Engine (`com.notes.client.editor`)
 - **`MarkdownEngineRegistry`**:
@@ -595,3 +615,33 @@ graph TD
 - **Build Tooling**: Gradle 8.x with Kotlin Multiplatform and Compose Multiplatform Gradle plugins.
 - **Code Coverage Gate**: Automated unit and integration tests strictly enforce $\ge 75\%$ code coverage on every Pull Request.
 - **Static Analysis**: `ktlint` and `detekt` enforce clean code formatting and architectural boundaries.
+
+---
+
+## 10. Editor UI/UX Overhaul & Modular Settings Architecture
+
+### 10.1. Workspace Maximization & Minimalist Canvas
+To deliver an immersive, distraction-free writing environment, all redundant auxiliary elements are eliminated:
+- **Header Note Title**: Prominently rendered in the top bar with long-press gesture support (`detectTapGestures(onLongPress = ...)`) for direct document renaming.
+- **Context-Aware Top Bar Actions**: Search and theme icons are replaced by context-aware AI Metadata triggers and an Edit/View mode toggle button.
+- **No Duplicate Toolbar Rows**: Sub-header rows previously containing document titles and status chips inside Canvas and Markdown views are removed.
+- **No Mobile Footer Bar**: The 3-button compact footer is eliminated, giving 100% of viewport height to the canvas.
+
+### 10.2. Responsive Full-Screen Settings Architecture
+Modal dialogs for settings are replaced by an adaptive full-screen `SettingsScreen`:
+- **Portrait Viewports (<600dp)**: Drill-down navigation stack with subpage transitions and a persistent Back button.
+- **Landscape, Tablet, Foldable & Desktop Viewports (>=600dp)**: Master-detail split-view with a persistent vertical side-navigation bar and active content panel.
+- **Subpages**:
+  - `General`: Theme selection (Dark / Light), editor font size slider, and search content indexing toggle.
+  - `Vault`: Unified User Cloud Profile & Storage paths inspector.
+  - `AI Providers`: Configurable multi-provider setup with credential masking, dynamic model discovery, and connection test diagnostics.
+  - `Editor Toolbar`: Live button reordering (Move Up / Move Down), visibility toggling (Remove / Disable to reserve bank), and command restoration.
+
+### 10.3. Note Protection & Universal Sharing Protocols
+- **Self-Contained Container Packaging (`.nap`)**:
+  - `SetPasswordProtectionDialog` derives deterministic PBKDF2 check-tags (`deriveCheckTag`), packages payload into `NA_PROTECTED_V1` container, and securely deletes plaintext content.
+  - `RemovePasswordProtectionDialog` verifies password against container check-tag and unpacks raw Markdown content.
+  - Barrier features `Modifier.imePadding()` with scrollable viewport to prevent virtual keyboard occlusion on mobile devices.
+- **Universal Note Sharing**:
+  - Standard Markdown notes: Shared natively via device OS share sheet or collaborative editing web links (`/collab/<noteId>`).
+  - Proprietary formats (Handwritten Canvas `.cmn` and protected notes): Exported to standard vector/document PDF via native print or headless generation.

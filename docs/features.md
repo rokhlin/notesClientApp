@@ -83,20 +83,28 @@ graph TD
   * Dynamic stroke thickness modulation based on stylus hardware pressure and tilt sensors on supported hardware (S-Pen, Apple Pencil) with fallback to uniform stroke on touch/mouse (per Q12).
   * *Explicit Constraint:* Programmatic palm rejection is omitted from initial implementation.
 * **Drawing Instruments & Toolset:**
-  * Pens: Ballpoint Pen, Fountain Pen, Pencil, Calligraphy Brush, and Highlighter (semi-transparent blending).
+  * Pens: Ballpoint Pen, Fountain Pen, Pencil, Calligraphy Brush, and Highlighter (semi-transparent blending). Freehand drawing preserves natural stroke geometry without unintended shape replacements.
   * Vector Eraser: Path/stroke-level erasing (removing individual vectors) and partial raster erasing.
   * Spline Smoothing: Catmull-Rom spline interpolation for smooth, natural ink lines (per Q10).
-  * Geometric Shapes: Both a dedicated toolbar shape tool + auto-snapping gesture (draw roughly and hold for 0.5s to snap to perfect shape) (per Q13).
-  * Color Picker & Presets: Hex input, palette swatches, opacity, and customizable stroke thickness.
+  * Geometric Shapes (Samsung Notes Benchmark):
+    - Shape Placement Mode: selecting shape activates center-anchor touch placement; live drag expands size; release commits shape.
+    - Long-Press Selection: activates bounding box, 4 corner resize handles, and drag-to-reposition.
+    - Floating Action Bar: contextual controls for delete, color palette cycling, stroke width (2pt, 4pt, 8pt), line style (Solid/Dashed), and confirmation.
+  * Interactive Text Containers:
+    - Floating text boxes (`CanvasTextBox`) movable across the canvas with drag handles.
+    - Live text editing, font styling, and quick deletion.
+  * Floating Collapsible Toolbar:
+    - Smooth horizontal scrolling (`horizontalScroll`) preventing tool clipping on any viewport width.
+    - Narrow toggle button on the far right (`>` to collapse, `<` when collapsed; only the narrow button remains visible).
 * **Layer Hierarchy:**
   * Multi-layer stacking: background grid/paper styles (lined, dotted, grid, blank), imported raster image layers, and foreground vector drawing layers.
   * Independent layer visibility toggling, reordering, opacity adjustments, and deletion.
 * **Compound Package Format (`.cmn` - Custom Multi-layer Note) & SVG Export:**
   * Bundled ZIP-compatible container with custom header magic bytes (`CMN\x01`) and distinct MIME type.
   * Contains `manifest.json` detailing schema version, layers, bounding boxes, Z-indices, and metadata.
-  * Vector strokes serialized as compact JSON coordinate arrays (points, pressure, timestamp, tool type, color, stroke width) via `kotlinx.serialization` (per Q11).
+  * Vector strokes, shapes (`CanvasShape`), and text boxes (`CanvasTextBox`) serialized as compact JSON coordinate arrays via `kotlinx.serialization` (per Q11).
   * High-resolution raster images preserved natively as PNG/JPEG.
-  * Built-in vector export from `.cmn` container to standardized SVG (per Q11).
+  * Built-in vector export from `.cmn` container to standardized SVG with support for strokes, geometric shapes (solid/dashed), and text elements (per Q11).
 
 ### 2.3 Local Storage & Serialization
 * **Lightweight Storage Model:** App-managed sandboxed storage using a **custom lightweight JSON file index** (`notes_index.json`) via `kotlinx.serialization` and `okio` (per Q19, Q29).
@@ -222,4 +230,21 @@ gantt
 30. **Figma MCP Integration:** Material 3 code-first UI without external Figma dependency (Figma MCP postponed).
 31. **Multi-Provider AI Architecture:** Direct client-side connectivity with optional server gateway. Native integration for Google Gemini, OpenAI, Anthropic, and Local LLM Server (Ollama / OpenAI-compatible) configured in System Settings (`SettingsDialog`).
 32. **Contextual Smart Metadata:** Intelligent note context analysis producing suggested tags, concise document summaries, and descriptive titles with interactive preview and selective user confirmation before atomic note persistence.
+
+---
+
+## 5. Active Feature Checklist: Editor UI Overhaul & Workspace Refactoring
+
+- [x] **FEAT-UI-01: Minimalist Editor Canvas & Workspace Maximization**: Remove secondary auxiliary toolbar rows and compact footer (Vault, Search, Settings) to dedicate maximum viewport space to note content.
+- [x] **FEAT-UI-02: Header Note Title with Long-Press Rename**: Display active note title prominently in top app bar with long-press gesture trigger to rename the document.
+- [x] **FEAT-UI-03: Header Actions Refactor**: Remove search and theme toggle icons from header; replace with AI Metadata trigger and Edit/View mode toggle button.
+- [x] **FEAT-UI-04: Editor Toolbar Compact Layout & Theming**: Reduce button margins and padding to 4px spacing, eliminate individual button backgrounds, and rely entirely on toolbar container background.
+- [x] **FEAT-GEST-01: Right-Edge Swipe Gesture Navigation**: Enable swipe gesture from right edge to summon right context drawer/menu.
+- [x] **FEAT-SET-01: Dedicated Responsive Settings Screen**: Replace `SettingsDialog` with a full-screen adaptive view (Portrait: drill-down navigation; Landscape/Foldable: master-detail side-nav).
+- [x] **FEAT-SET-02: Nested Settings Pages**: Implement Back navigation, General (Themes, Font Size, Search Indexing toggle), Vault (Cloud Profile & Storage), AI Providers, and Editor Toolbar customization.
+- [x] **FEAT-SET-03: Editor Toolbar Button Customizer**: Allow reordering toolbar items, hiding buttons to disabled bank, and adding custom commands / restoring base buttons.
+- [x] **FEAT-SRCH-01: Dedicated Full-Text & Tag Search Page**: Add Search tab/page to left navigation for querying note titles, tags, and full-text content with configurable toggle checkbox and privacy guard for protected notes (title/tags only).
+- [x] **FEAT-SEC-01: Protected Note Barrier Refinements**: Hide Edit Source & AI Metadata buttons until unlocked, remove obsolete "No Collab" chip, fix password hint overlap, enlarge password input field, and apply keyboard IME offset on mobile.
+- [x] **FEAT-SEC-02: Note Password Protection Lifecycle**: Implement "Protect with password" action converting plain notes to encrypted `.nap` container with atomic unencrypted deletion, and "Remove password protection" decrypting back to standard Markdown.
+- [x] **FEAT-SHARE-01: Unified Note Sharing Hub**: Context menu share action supporting native OS file share (.md / .cmn / PDF), collaborative editing web link creation, and PDF export for proprietary/canvas formats.
 

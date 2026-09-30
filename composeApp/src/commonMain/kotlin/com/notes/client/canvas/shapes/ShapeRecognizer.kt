@@ -202,4 +202,84 @@ object ShapeRecognizer {
             )
         }
     }
+
+    /**
+     * Creates a shape dynamically from touch start (center) and current drag offset.
+     */
+    fun createPrimitiveFromDrag(type: RecognizedShapeType, start: Offset, current: Offset): SnappedShape {
+        return when (type) {
+            RecognizedShapeType.STRAIGHT_LINE -> SnappedShape.Line(
+                start = start,
+                end = current
+            )
+            RecognizedShapeType.RECTANGLE -> {
+                val rx = kotlin.math.max(10f, kotlin.math.abs(current.x - start.x))
+                val ry = kotlin.math.max(10f, kotlin.math.abs(current.y - start.y))
+                SnappedShape.Rectangle(
+                    bounds = Rect(start.x - rx, start.y - ry, start.x + rx, start.y + ry)
+                )
+            }
+            RecognizedShapeType.CIRCLE -> {
+                val r = kotlin.math.max(10f, hypot(current.x - start.x, current.y - start.y))
+                SnappedShape.Circle(
+                    center = start,
+                    radius = r
+                )
+            }
+            RecognizedShapeType.ELLIPSE -> {
+                val rx = kotlin.math.max(10f, kotlin.math.abs(current.x - start.x))
+                val ry = kotlin.math.max(10f, kotlin.math.abs(current.y - start.y))
+                SnappedShape.Ellipse(
+                    center = start,
+                    radiusX = rx,
+                    radiusY = ry
+                )
+            }
+            RecognizedShapeType.TRIANGLE -> {
+                val rx = kotlin.math.max(10f, kotlin.math.abs(current.x - start.x))
+                val ry = kotlin.math.max(10f, kotlin.math.abs(current.y - start.y))
+                SnappedShape.Triangle(
+                    p1 = Offset(start.x, start.y - ry),
+                    p2 = Offset(start.x + rx, start.y + ry),
+                    p3 = Offset(start.x - rx, start.y + ry)
+                )
+            }
+        }
+    }
+
+    /**
+     * Converts a CanvasShape data model into a SnappedShape for rendering.
+     */
+    fun canvasShapeToSnapped(shape: com.notes.common.models.CanvasShape): SnappedShape {
+        val center = Offset(shape.x, shape.y)
+        val hw = shape.width / 2f
+        val hh = shape.height / 2f
+        return when (shape.type) {
+            RecognizedShapeType.STRAIGHT_LINE.name -> SnappedShape.Line(
+                start = Offset(shape.x - hw, shape.y - hh),
+                end = Offset(shape.x + hw, shape.y + hh)
+            )
+            RecognizedShapeType.RECTANGLE.name -> SnappedShape.Rectangle(
+                bounds = Rect(shape.x - hw, shape.y - hh, shape.x + hw, shape.y + hh)
+            )
+            RecognizedShapeType.CIRCLE.name -> SnappedShape.Circle(
+                center = center,
+                radius = hw
+            )
+            RecognizedShapeType.ELLIPSE.name -> SnappedShape.Ellipse(
+                center = center,
+                radiusX = hw,
+                radiusY = hh
+            )
+            RecognizedShapeType.TRIANGLE.name -> SnappedShape.Triangle(
+                p1 = Offset(center.x, center.y - hh),
+                p2 = Offset(center.x + hw, center.y + hh),
+                p3 = Offset(center.x - hw, center.y + hh)
+            )
+            else -> SnappedShape.Rectangle(
+                bounds = Rect(shape.x - hw, shape.y - hh, shape.x + hw, shape.y + hh)
+            )
+        }
+    }
 }
+

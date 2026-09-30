@@ -36,8 +36,14 @@ import com.notes.client.theme.NotesTheme
 import com.notes.client.auth.AuthManager
 import com.notes.client.auth.LoginRequiredDialog
 import com.notes.client.components.SettingsDialog
+import com.notes.client.components.SettingsScreen
+import com.notes.client.components.SetPasswordProtectionDialog
+import com.notes.client.components.RemovePasswordProtectionDialog
+import com.notes.client.components.NoteSharingDialog
 import com.notes.client.crypto.ProtectedNoteBarrier
 import com.notes.client.storage.DeviceSettingsDriver
+import com.notes.client.util.currentTimeMillis
+import androidx.compose.ui.unit.sp
 import com.notes.common.crypto.ProtectedNoteCodec
 import com.notes.client.ai.AiClientService
 import com.notes.client.ai.DefaultAiClientService
@@ -53,11 +59,27 @@ import com.notes.common.models.Note
 import com.notes.common.models.NoteMetadataFill
 import com.notes.common.models.NoteType
 import com.notes.common.models.ToolType
+import com.notes.common.models.CanvasShape
+import com.notes.common.models.CanvasTextBox
+import com.notes.client.canvas.shapes.RecognizedShapeType
+import kotlin.random.Random
 import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
-    var isDarkTheme by remember { mutableStateOf(true) }
+    val deviceSettingsDriver = remember { DeviceSettingsDriver() }
+    var generalSettings by remember { mutableStateOf(deviceSettingsDriver.getGeneralSettings()) }
+    var isDarkTheme by remember {
+        mutableStateOf(
+            when (generalSettings.theme) {
+                "LIGHT" -> false
+                "DARK" -> true
+                else -> true
+            }
+        )
+    }
+    var editorFontSize by remember { mutableStateOf(generalSettings.editorFontSize) }
+    var toolbarConfig by remember { mutableStateOf(deviceSettingsDriver.getToolbarConfig()) }
 
     NotesTheme(darkTheme = isDarkTheme) {
         var notes by remember {
@@ -90,7 +112,15 @@ fun App() {
                     Note(
                         id = "4",
                         title = "Security & Storage Manifest",
-                        content = "# Security & Storage Manifest\n\n- Individual Note Password Protection (Self-Contained .nap Container)\n- Unified R2 Cloud Storage with per-tenant users/{userId}/ isolation\n- API request authentication with userApiKey + HMAC-SHA256 signature\n- Two-tier configuration: UserCloudConfig (synced) & DeviceLocalModuleConfig (hardware)",
+                        content = ProtectedNoteCodec.pack(
+                            ProtectedNoteCodec.createProtectedNote(
+                                noteId = "4",
+                                title = "Security & Storage Manifest",
+                                password = "secret123",
+                                payloadContent = "# Security & Storage Manifest\n\n- Individual Note Password Protection (Self-Contained .nap Container)\n- Unified R2 Cloud Storage with per-tenant users/{userId}/ isolation\n- API request authentication with userApiKey + HMAC-SHA256 signature\n- Two-tier configuration: UserCloudConfig (synced) & DeviceLocalModuleConfig (hardware)",
+                                passwordHint = "Default demo password: 'secret123'"
+                            )
+                        ),
                         type = NoteType.TEXT,
                         tags = listOf("security", "protected", "starred"),
                         isProtected = true,
@@ -110,7 +140,10 @@ fun App() {
         }
 
         val authManager = remember { AuthManager() }
-        val deviceSettingsDriver = remember { DeviceSettingsDriver() }
+        var showSettingsScreen by remember { mutableStateOf(false) }
+        var showProtectDialog by remember { mutableStateOf(false) }
+        var showUnprotectDialog by remember { mutableStateOf(false) }
+        var showShareDialog by remember { mutableStateOf(false) }
         var showLoginRequiredDialog by remember { mutableStateOf(false) }
         var showSettingsDialog by remember { mutableStateOf(false) }
         var unlockedNoteIds by remember { mutableStateOf(setOf<String>()) }
@@ -124,6 +157,8 @@ fun App() {
 
         // Canvas state for handwritten notes
         var canvasBrush by remember { mutableStateOf(BrushConfig.defaultFor(ToolType.PEN)) }
+        var pendingShapeType by remember { mutableStateOf<RecognizedShapeType?>(null) }
+        var isCanvasToolbarCollapsed by remember { mutableStateOf(false) }
         var canvasLayersByNoteId by remember {
             mutableStateOf<Map<String, List<CanvasLayer>>>(
                 mapOf(
@@ -191,7 +226,11 @@ fun App() {
                 val request = AiMetadataRequest(
                     noteId = note.id,
                     title = note.title,
-                    content = note.content,
+                    content = if (note.isProtected && note.content.startsWith(ProtectedNoteCodec.MAGIC_HEADER)) {
+                        runCatching { ProtectedNoteCodec.unpack(note.content).payloadContent }.getOrDefault(note.content)
+                    } else {
+                        note.content
+                    },
                     existingTags = note.tags,
                     maxTags = aiSettings.maxTagsToGenerate
                 )
@@ -232,10 +271,35 @@ fun App() {
             }
         }
 
+        if (showSettingsScreen) {
+            SettingsScreen(
+                authManager = authManager,
+                deviceSettingsDriver = deviceSettingsDriver,
+                onNavigateBack = { showSettingsScreen = false },
+                onOpenStorageVault = { showStorageDialog = true },
+                onThemeChanged = { themeCode ->
+                    isDarkTheme = when (themeCode) {
+                        "LIGHT" -> false
+                        "DARK" -> true
+                        else -> true
+                    }
+                },
+                onFontSizeChanged = { size ->
+                    editorFontSize = size
+                },
+                onToolbarConfigChanged = {
+                    toolbarConfig = deviceSettingsDriver.getToolbarConfig()
+                }
+            )
+            return@NotesTheme
+        }
+
         ObsidianScaffold(
             notes = notes,
             activeNote = activeNote,
             isDarkTheme = isDarkTheme,
+            isEditMode = isEditMode,
+            isNoteUnlocked = activeNote?.let { !it.isProtected || unlockedNoteIds.contains(it.id) } ?: true,
             activeEngineId = activeEngineId,
             onEngineSelected = { activeEngineId = it },
             backlinks = activeBacklinks,
@@ -252,7 +316,7 @@ fun App() {
                     content = "# ${title.ifBlank { "Untitled Note" }}\n\n",
                     type = NoteType.TEXT,
                     tags = listOf("new"),
-                    createdAt = 1717030000000L
+                    createdAt = currentTimeMillis()
                 )
                 storageRepository.saveNote(newNote)
                 notes = listOf(newNote) + notes
@@ -260,20 +324,28 @@ fun App() {
             },
             onToggleTheme = { isDarkTheme = !isDarkTheme },
             onOpenSettings = {
-                if (authManager.isAuthenticated) {
-                    showSettingsDialog = true
-                } else {
-                    showLoginRequiredDialog = true
+                showSettingsScreen = true
+            },
+            onTriggerAiMetadata = { triggerAiMetadata() },
+            onToggleEditMode = { isEditMode = !isEditMode },
+            onRenameNote = { newTitle ->
+                activeNote?.let { cur ->
+                    val updated = cur.copy(title = newTitle, updatedAt = currentTimeMillis())
+                    activeNote = updated
+                    notes = notes.map { if (it.id == updated.id) updated else it }
+                    storageRepository.saveNote(updated)
                 }
             },
-            onTriggerAiMetadata = { triggerAiMetadata() }
+            onProtectNote = { showProtectDialog = true },
+            onUnprotectNote = { showUnprotectDialog = true },
+            onShareNote = { showShareDialog = true }
         ) { currentNote ->
             if (currentNote != null) {
                 // Unified Workspace Canvas (NO TABS) - Single Document Focus
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     if (currentNote.type == NoteType.CANVAS) {
                         val currentLayers = canvasLayersByNoteId[currentNote.id] ?: listOf(
@@ -285,285 +357,119 @@ fun App() {
                             )
                         )
 
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            // Top Bar with Canvas Note Title & Details
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = currentNote.title,
-                                    onValueChange = { newTitle ->
-                                        val updated = currentNote.copy(title = newTitle)
-                                        activeNote = updated
-                                        notes = notes.map { if (it.id == updated.id) updated else it }
-                                    },
-                                    label = { Text("Canvas Document Title") },
-                                    modifier = Modifier.weight(1f).padding(end = 16.dp),
-                                    singleLine = true
-                                )
-                                AssistChip(
-                                    onClick = { },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.Draw,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text("Skia Continuous Roll") },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                AssistChip(
-                                    onClick = { triggerAiMetadata() },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text("AI Metadata") },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                FilledTonalButton(
-                                    onClick = { showExportCanvasDialog = true }
-                                ) {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Export")
+                        // Interactive Viewport with Skia Handwritten Canvas and Floating Samsung Notes Toolbar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp))
+                        ) {
+                            SkiaHandwrittenCanvas(
+                                modifier = Modifier.fillMaxSize(),
+                                layers = currentLayers,
+                                onLayersChange = { newLayers ->
+                                    canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                    canvasRedoHistory = emptyList()
+                                    canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to newLayers)
+                                },
+                                currentBrush = canvasBrush,
+                                pendingShapeType = pendingShapeType,
+                                onShapePlaced = {
+                                    pendingShapeType = null
+                                },
+                                onCancelShapePlacement = {
+                                    pendingShapeType = null
                                 }
-                            }
+                            )
 
-                            // Interactive Viewport with Skia Handwritten Canvas and Floating Samsung Notes Toolbar
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                            ) {
-                                SkiaHandwrittenCanvas(
-                                    modifier = Modifier.fillMaxSize(),
-                                    layers = currentLayers,
-                                    onLayersChange = { newLayers ->
+                            CanvasToolbar(
+                                currentBrush = canvasBrush,
+                                onBrushChange = { canvasBrush = it },
+                                canUndo = canvasUndoHistory.isNotEmpty(),
+                                canRedo = canvasRedoHistory.isNotEmpty(),
+                                onUndo = {
+                                    if (canvasUndoHistory.isNotEmpty()) {
+                                        val previousState = canvasUndoHistory.last()
+                                        canvasUndoHistory = canvasUndoHistory.dropLast(1)
+                                        canvasRedoHistory = canvasRedoHistory + listOf(currentLayers)
+                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to previousState)
+                                    }
+                                },
+                                onRedo = {
+                                    if (canvasRedoHistory.isNotEmpty()) {
+                                        val nextState = canvasRedoHistory.last()
+                                        canvasRedoHistory = canvasRedoHistory.dropLast(1)
                                         canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
-                                        canvasRedoHistory = emptyList()
-                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to newLayers)
-                                    },
-                                    currentBrush = canvasBrush
-                                )
-
-                                CanvasToolbar(
-                                    currentBrush = canvasBrush,
-                                    onBrushChange = { canvasBrush = it },
-                                    canUndo = canvasUndoHistory.isNotEmpty(),
-                                    canRedo = canvasRedoHistory.isNotEmpty(),
-                                    onUndo = {
-                                        if (canvasUndoHistory.isNotEmpty()) {
-                                            val previousState = canvasUndoHistory.last()
-                                            canvasUndoHistory = canvasUndoHistory.dropLast(1)
-                                            canvasRedoHistory = canvasRedoHistory + listOf(currentLayers)
-                                            canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to previousState)
-                                        }
-                                    },
-                                    onRedo = {
-                                        if (canvasRedoHistory.isNotEmpty()) {
-                                            val nextState = canvasRedoHistory.last()
-                                            canvasRedoHistory = canvasRedoHistory.dropLast(1)
-                                            canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
-                                            canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to nextState)
-                                        }
-                                    },
-                                    onClear = {
-                                        canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
-                                        canvasRedoHistory = emptyList()
-                                        val cleared = currentLayers.map { it.copy(strokes = emptyList()) }
-                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to cleared)
-                                    },
-                                    onInsertShape = { shapeType ->
-                                        val primitive = ShapeRecognizer.createDefaultPrimitive(
-                                            type = shapeType,
-                                            center = androidx.compose.ui.geometry.Offset(440f, 350f)
-                                        )
-                                        val strokePoints = primitive.toStrokePoints()
-                                        val newStroke = InkStroke(
-                                            id = "stroke_shape_${currentLayers.firstOrNull()?.strokes?.size ?: 0}",
-                                            tool = ToolType.PEN,
-                                            colorHex = "#4F46E5",
-                                            strokeWidth = canvasBrush.baseWidth,
-                                            points = strokePoints.map { it.toInkPoint() }
-                                        )
-                                        canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
-                                        canvasRedoHistory = emptyList()
-                                        val updated = if (currentLayers.isEmpty()) {
-                                            listOf(
-                                                CanvasLayer(
-                                                    id = "layer_${currentNote.id}",
-                                                    name = "Main",
-                                                    strokes = listOf(newStroke)
-                                                )
+                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to nextState)
+                                    }
+                                },
+                                onClear = {
+                                    canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                    canvasRedoHistory = emptyList()
+                                    val cleared = currentLayers.map { it.copy(strokes = emptyList(), shapes = emptyList(), textBoxes = emptyList()) }
+                                    canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to cleared)
+                                },
+                                pendingShapeType = pendingShapeType,
+                                onSelectShapeForPlacement = { shapeType ->
+                                    pendingShapeType = shapeType
+                                },
+                                onAddTextBox = {
+                                    val newBox = CanvasTextBox(
+                                        id = "text_${currentTimeMillis()}_${Random.nextInt(10000, 99999)}",
+                                        text = "Tap to edit text",
+                                        x = 160f,
+                                        y = 180f,
+                                        width = 160f,
+                                        height = 70f
+                                    )
+                                    canvasUndoHistory = canvasUndoHistory + listOf(currentLayers)
+                                    canvasRedoHistory = emptyList()
+                                    val updated = if (currentLayers.isEmpty()) {
+                                        listOf(
+                                            CanvasLayer(
+                                                id = "layer_${currentNote.id}",
+                                                name = "Main",
+                                                textBoxes = listOf(newBox)
                                             )
-                                        } else {
-                                            currentLayers.mapIndexed { i, l ->
-                                                if (i == 0) l.copy(strokes = l.strokes + newStroke) else l
-                                            }
+                                        )
+                                    } else {
+                                        currentLayers.mapIndexed { i, l ->
+                                            if (i == 0) l.copy(textBoxes = l.textBoxes + newBox) else l
                                         }
-                                        canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to updated)
-                                    },
-                                    modifier = Modifier.align(Alignment.BottomCenter)
-                                )
-                            }
+                                    }
+                                    canvasLayersByNoteId = canvasLayersByNoteId + (currentNote.id to updated)
+                                },
+                                isCollapsed = isCanvasToolbarCollapsed,
+                                onToggleCollapse = { isCanvasToolbarCollapsed = !isCanvasToolbarCollapsed },
+                                modifier = Modifier.align(if (isCanvasToolbarCollapsed) Alignment.BottomEnd else Alignment.BottomCenter)
+                            )
+                        }
 
-                            if (showExportCanvasDialog) {
-                                ExportCanvasDialog(
-                                    title = currentNote.title,
-                                    layers = currentLayers,
-                                    onDismiss = { showExportCanvasDialog = false }
-                                )
-                            }
+                        if (showExportCanvasDialog) {
+                            ExportCanvasDialog(
+                                title = currentNote.title,
+                                layers = currentLayers,
+                                onDismiss = { showExportCanvasDialog = false }
+                            )
                         }
                     } else {
-                        // Markdown Text Editor Canvas with Pluggable Engine & Wikilinks
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = currentNote.title,
-                                onValueChange = { newTitle ->
-                                    val updated = currentNote.copy(title = newTitle)
-                                    activeNote = updated
-                                    notes = notes.map { if (it.id == updated.id) updated else it }
-                                },
-                                textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
-                                )
-                            )
-
-                            if (currentNote.isProtected) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                val isUnlocked = unlockedNoteIds.contains(currentNote.id)
-                                AssistChip(
-                                    onClick = {
-                                        if (isUnlocked) {
-                                            unlockedNoteIds = unlockedNoteIds - currentNote.id
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            if (isUnlocked) Icons.Default.Lock else Icons.Default.Security,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text(if (isUnlocked) "Re-Lock" else "Protected") },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
-                                        labelColor = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                AssistChip(
-                                    onClick = {},
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.CloudOff,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text("No Collab") }
-                                )
-                            }
-
-                            if (currentNote.isEncrypted) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                AssistChip(
-                                    onClick = {
-                                        if (isVaultUnlocked) {
-                                            isVaultUnlocked = false
-                                        } else {
-                                            showUnlockVaultDialog = true
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            if (isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text(if (isVaultUnlocked) "Vault Unlocked" else "Encrypted Note") }
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            AssistChip(
-                                onClick = { triggerAiMetadata() },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                },
-                                label = { Text("AI Metadata") },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Edit / Preview toggle pill
-                            TextButton(
-                                onClick = { isEditMode = !isEditMode },
-                                enabled = (!currentNote.isEncrypted || isVaultUnlocked) && (!currentNote.isProtected || unlockedNoteIds.contains(currentNote.id))
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(
-                                        text = if (isEditMode) "View (${currentEngine.displayName})" else "Edit Source",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
+                        // Markdown Text Editor Canvas with Pluggable Engine & Wikilinks (duplicate top row removed)
+                        val unpackedMetadata = remember(currentNote.content) {
+                            runCatching {
+                                if (currentNote.content.startsWith(ProtectedNoteCodec.MAGIC_HEADER)) {
+                                    ProtectedNoteCodec.unpack(currentNote.content).metadata
+                                } else null
+                            }.getOrNull()
                         }
+                        val actualSalt = unpackedMetadata?.saltHex ?: "aabbccddeeff00112233445566778899"
+                        val actualCheckTag = unpackedMetadata?.passwordCheckTagHex ?: remember { ProtectedNoteCodec.deriveCheckTag("secret123", actualSalt) }
+                        val actualHint = unpackedMetadata?.passwordHint ?: "Default demo password: 'secret123'"
 
                         if (currentNote.isProtected && !unlockedNoteIds.contains(currentNote.id)) {
-                            val sampleSalt = "aabbccddeeff00112233445566778899"
-                            val sampleCheckTag = remember { ProtectedNoteCodec.deriveCheckTag("secret123", sampleSalt) }
-
                             ProtectedNoteBarrier(
                                 note = currentNote,
-                                passwordHint = "Default demo password: 'secret123'",
-                                expectedCheckTagHex = sampleCheckTag,
-                                saltHex = sampleSalt,
+                                passwordHint = actualHint,
+                                expectedCheckTagHex = actualCheckTag,
+                                saltHex = actualSalt,
                                 onUnlocked = {
                                     unlockedNoteIds = unlockedNoteIds + currentNote.id
                                 }
@@ -605,11 +511,15 @@ fun App() {
                                 }
                             }
                         } else if (isEditMode) {
-                            var editorTextFieldValue by remember(currentNote.id) {
-                                mutableStateOf(TextFieldValue(currentNote.content, TextRange(currentNote.content.length)))
+                            val displayContent = remember(currentNote.id, currentNote.content) {
+                                if (currentNote.isProtected && currentNote.content.startsWith(ProtectedNoteCodec.MAGIC_HEADER)) {
+                                    runCatching { ProtectedNoteCodec.unpack(currentNote.content).payloadContent }.getOrDefault(currentNote.content)
+                                } else {
+                                    currentNote.content
+                                }
                             }
-                            if (editorTextFieldValue.text != currentNote.content) {
-                                editorTextFieldValue = editorTextFieldValue.copy(text = currentNote.content)
+                            var editorTextFieldValue by remember(currentNote.id) {
+                                mutableStateOf(TextFieldValue(displayContent, TextRange(displayContent.length)))
                             }
                             val content = editorTextFieldValue.text
                             // Check if cursor/content currently has an active [[ autocomplete query
@@ -621,11 +531,23 @@ fun App() {
                                     value = editorTextFieldValue,
                                     onValueChange = { newValue ->
                                         editorTextFieldValue = newValue
-                                        val updated = currentNote.copy(content = newValue.text)
+                                        val newStorageContent = if (currentNote.isProtected && unpackedMetadata != null) {
+                                            ProtectedNoteCodec.pack(
+                                                com.notes.common.models.SelfContainedProtectedNote(
+                                                    metadata = unpackedMetadata,
+                                                    payloadContent = newValue.text
+                                                )
+                                            )
+                                        } else {
+                                            newValue.text
+                                        }
+                                        val updated = currentNote.copy(content = newStorageContent, updatedAt = currentTimeMillis())
                                         activeNote = updated
                                         notes = notes.map { if (it.id == updated.id) updated else it }
+                                        storageRepository.saveNote(updated)
                                     },
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    activeButtonIds = toolbarConfig.activeButtons,
+                                    modifier = Modifier.padding(bottom = 4.dp)
                                 )
 
                                 Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -633,11 +555,22 @@ fun App() {
                                         value = editorTextFieldValue,
                                         onValueChange = { newValue ->
                                             editorTextFieldValue = newValue
-                                            val updated = currentNote.copy(content = newValue.text)
+                                            val newStorageContent = if (currentNote.isProtected && unpackedMetadata != null) {
+                                                ProtectedNoteCodec.pack(
+                                                    com.notes.common.models.SelfContainedProtectedNote(
+                                                        metadata = unpackedMetadata,
+                                                        payloadContent = newValue.text
+                                                    )
+                                                )
+                                            } else {
+                                                newValue.text
+                                            }
+                                            val updated = currentNote.copy(content = newStorageContent, updatedAt = currentTimeMillis())
                                             activeNote = updated
                                             notes = notes.map { if (it.id == updated.id) updated else it }
+                                            storageRepository.saveNote(updated)
                                         },
-                                        textStyle = MaterialTheme.typography.bodyLarge,
+                                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = editorFontSize.sp),
                                         modifier = Modifier.fillMaxSize(),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -654,9 +587,20 @@ fun App() {
                                                 val newContent = "$prefix[[${selected.title}]] "
                                                 val newTfv = TextFieldValue(newContent, TextRange(newContent.length))
                                                 editorTextFieldValue = newTfv
-                                                val updated = currentNote.copy(content = newContent)
+                                                val newStorageContent = if (currentNote.isProtected && unpackedMetadata != null) {
+                                                    ProtectedNoteCodec.pack(
+                                                        com.notes.common.models.SelfContainedProtectedNote(
+                                                            metadata = unpackedMetadata,
+                                                            payloadContent = newContent
+                                                        )
+                                                    )
+                                                } else {
+                                                    newContent
+                                                }
+                                                val updated = currentNote.copy(content = newStorageContent, updatedAt = currentTimeMillis())
                                                 activeNote = updated
                                                 notes = notes.map { if (it.id == updated.id) updated else it }
+                                                storageRepository.saveNote(updated)
                                             },
                                             onDismiss = { /* Dismiss popup */ },
                                             modifier = Modifier.align(Alignment.TopStart).padding(top = 40.dp)
@@ -666,8 +610,13 @@ fun App() {
                             }
                         } else {
                             // Pluggable Engine Rendering with Wikilink Navigation
+                            val renderContent = if (currentNote.isProtected && currentNote.content.startsWith(ProtectedNoteCodec.MAGIC_HEADER)) {
+                                runCatching { ProtectedNoteCodec.unpack(currentNote.content).payloadContent }.getOrDefault(currentNote.content)
+                            } else {
+                                currentNote.content
+                            }
                             currentEngine.Render(
-                                content = currentNote.content,
+                                content = renderContent,
                                 modifier = Modifier.weight(1f),
                                 onLinkClick = { linkTitle ->
                                     val target = notes.find { it.title.equals(linkTitle, ignoreCase = true) }
@@ -919,6 +868,76 @@ fun App() {
                     }) {
                         Text("Cancel")
                     }
+                }
+            )
+        }
+
+        if (showProtectDialog && activeNote != null) {
+            val targetNote = activeNote!!
+            SetPasswordProtectionDialog(
+                note = targetNote,
+                onConfirm = { password, hint ->
+                    val protectedSelfContained = ProtectedNoteCodec.createProtectedNote(
+                        noteId = targetNote.id,
+                        title = targetNote.title,
+                        password = password,
+                        payloadContent = targetNote.content,
+                        type = targetNote.type,
+                        passwordHint = hint
+                    )
+                    val packedContent = ProtectedNoteCodec.pack(protectedSelfContained)
+                    val updated = targetNote.copy(
+                        content = packedContent,
+                        isProtected = true,
+                        updatedAt = currentTimeMillis()
+                    )
+                    storageRepository.saveNote(updated)
+                    notes = notes.map { if (it.id == updated.id) updated else it }
+                    activeNote = updated
+                    unlockedNoteIds = unlockedNoteIds - targetNote.id
+                    showProtectDialog = false
+                },
+                onDismiss = { showProtectDialog = false }
+            )
+        }
+
+        if (showUnprotectDialog && activeNote != null) {
+            val targetNote = activeNote!!
+            val unpackedMeta = runCatching {
+                if (targetNote.content.startsWith(ProtectedNoteCodec.MAGIC_HEADER)) {
+                    ProtectedNoteCodec.unpack(targetNote.content).metadata
+                } else null
+            }.getOrNull()
+
+            RemovePasswordProtectionDialog(
+                note = targetNote,
+                expectedCheckTag = unpackedMeta?.passwordCheckTagHex,
+                saltHex = unpackedMeta?.saltHex,
+                onConfirm = { plainContent ->
+                    val updated = targetNote.copy(
+                        content = plainContent,
+                        isProtected = false,
+                        updatedAt = currentTimeMillis()
+                    )
+                    storageRepository.saveNote(updated)
+                    notes = notes.map { if (it.id == updated.id) updated else it }
+                    activeNote = updated
+                    unlockedNoteIds = unlockedNoteIds + targetNote.id
+                    showUnprotectDialog = false
+                },
+                onDismiss = { showUnprotectDialog = false }
+            )
+        }
+
+        if (showShareDialog && activeNote != null) {
+            val targetNote = activeNote!!
+            NoteSharingDialog(
+                note = targetNote,
+                remoteServerUrl = null,
+                onDismiss = { showShareDialog = false },
+                onExportPdf = {
+                    showExportCanvasDialog = true
+                    showShareDialog = false
                 }
             )
         }
