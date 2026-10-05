@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Mobile Editor Toolbar & Customization Engine (Obsidian Android Benchmark)**:
+  - 48dp IME Soft Keyboard Docking: Integrated toolbar directly atop the Android virtual keyboard using `WindowInsets.ime` padding with zero layout jitter.
+  - WCAG 2.1 AA Accessible Touch Targets: Enlarged all toolbar button hitboxes to strict 48dp x 48dp targets with 48dp bar height.
+  - Obsidian Dark Color Tokens: Styled with `#1F1F23` surface, `#333338` divider border, `#2E283E` active tool background, and `#A78BFA` purple accent.
+  - Default 13 Mobile Core Actions: Configured `quick_commands` (`?`), `undo` (`↶`), `redo` (`↷`), `tasks` (`[ ]`), `wikilink` (`[[ ]]`), `tag` (`#`), `attachment` (`📎`), `heading_menu` (`H`), `bold` (`B`), `italic` (`I`), `strikethrough` (`S`), `link` (`🔗`), and `codeblock` (`</>`).
+  - Interactive Customization Modal Sheet ("Настройка инструментария"): Compose bottom sheet supporting drag/reorder, removal (`✕`), adding extended commands (`+ Добавить команду...`), and extended settings (indent/outdent, fold headings).
+  - Undo/Redo & Heading Transitions: Integrated stateful undo/redo stacks and dynamic heading level picker (H1, H2, H3, Paragraph) via `MarkdownFormatter.applyHeadingLevel`.
+  - Comprehensive Test Suite: Added `MobileEditorToolbarTest` verifying sequence, mutations, attachment, indentation, and heading level transitions with 100% pass rate.
 - **Handwritten Notes Editor (Canvas) Overhaul (Samsung Notes benchmark)**:
   - Standardized Top Header: Active note title with long-press rename trigger and strictly icon-only buttons across mobile and wide desktop layouts.
   - Viewport Maximization: Reclaimed 100% of vertical canvas space by eliminating bottom navigation.
