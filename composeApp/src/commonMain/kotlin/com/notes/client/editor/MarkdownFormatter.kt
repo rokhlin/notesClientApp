@@ -132,4 +132,58 @@ object MarkdownFormatter {
     fun applyWebLink(value: TextFieldValue): TextFieldValue = wrapSelection(value, "[", "](https://)")
 
     fun applyTag(value: TextFieldValue): TextFieldValue = wrapSelection(value, "#", "")
+
+    fun applyAttachment(value: TextFieldValue): TextFieldValue = wrapSelection(value, "![[", "]]")
+
+    fun applyIndent(value: TextFieldValue): TextFieldValue {
+        val text = value.text
+        if (text.isEmpty()) return TextFieldValue("  ", TextRange(2))
+        val selStart = minOf(value.selection.start, value.selection.end).coerceIn(0, text.length)
+        val lastNewline = text.lastIndexOf('\n', (selStart - 1).coerceAtLeast(0))
+        val lineStart = if (lastNewline == -1 || selStart == 0) 0 else lastNewline + 1
+        val newText = text.substring(0, lineStart) + "  " + text.substring(lineStart)
+        return TextFieldValue(newText, TextRange(selStart + 2))
+    }
+
+    fun applyOutdent(value: TextFieldValue): TextFieldValue {
+        val text = value.text
+        if (text.isEmpty()) return value
+        val selStart = minOf(value.selection.start, value.selection.end).coerceIn(0, text.length)
+        val lastNewline = text.lastIndexOf('\n', (selStart - 1).coerceAtLeast(0))
+        val lineStart = if (lastNewline == -1 || selStart == 0) 0 else lastNewline + 1
+        return if (text.startsWith("  ", lineStart)) {
+            val newText = text.substring(0, lineStart) + text.substring(lineStart + 2)
+            val newCursor = (selStart - 2).coerceAtLeast(lineStart)
+            TextFieldValue(newText, TextRange(newCursor))
+        } else if (text.startsWith(" ", lineStart)) {
+            val newText = text.substring(0, lineStart) + text.substring(lineStart + 1)
+            val newCursor = (selStart - 1).coerceAtLeast(lineStart)
+            TextFieldValue(newText, TextRange(newCursor))
+        } else {
+            value
+        }
+    }
+
+    fun applyHeadingLevel(value: TextFieldValue, level: Int): TextFieldValue {
+        val text = value.text
+        if (text.isEmpty()) {
+            val prefix = if (level in 1..6) "#".repeat(level) + " " else ""
+            return TextFieldValue(prefix, TextRange(prefix.length))
+        }
+        val selStart = minOf(value.selection.start, value.selection.end).coerceIn(0, text.length)
+        val lastNewline = text.lastIndexOf('\n', (selStart - 1).coerceAtLeast(0))
+        val lineStart = if (lastNewline == -1 || selStart == 0) 0 else lastNewline + 1
+        val nextNewline = text.indexOf('\n', selStart)
+        val lineEnd = if (nextNewline == -1) text.length else nextNewline
+        val currentLine = text.substring(lineStart, lineEnd)
+
+        // Strip existing heading hashes if present
+        val stripped = currentLine.trimStart { it == '#' }.trimStart(' ')
+        val targetPrefix = if (level in 1..6) "#".repeat(level) + " " else ""
+        val newLine = targetPrefix + stripped
+        val newText = text.substring(0, lineStart) + newLine + text.substring(lineEnd)
+        val shift = newLine.length - currentLine.length
+        val newCursor = (selStart + shift).coerceIn(lineStart, lineStart + newLine.length)
+        return TextFieldValue(newText, TextRange(newCursor))
+    }
 }

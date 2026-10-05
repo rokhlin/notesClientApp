@@ -27,6 +27,8 @@ import com.notes.client.crypto.VaultUnlockDialog
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import com.notes.client.editor.EditorToolbar
+import com.notes.client.editor.ToolbarCustomizationSheet
+import com.notes.client.editor.UserToolbarConfig
 import com.notes.client.editor.MarkdownEngineRegistry
 import com.notes.client.editor.WikilinkAutocompletePopup
 import com.notes.client.editor.WikilinkParser
@@ -146,6 +148,7 @@ fun App() {
         var showShareDialog by remember { mutableStateOf(false) }
         var showLoginRequiredDialog by remember { mutableStateOf(false) }
         var showSettingsDialog by remember { mutableStateOf(false) }
+        var showToolbarCustomizer by remember { mutableStateOf(false) }
         var unlockedNoteIds by remember { mutableStateOf(setOf<String>()) }
 
         var activeNote by remember { mutableStateOf<Note?>(notes.firstOrNull()) }
@@ -521,6 +524,8 @@ fun App() {
                             var editorTextFieldValue by remember(currentNote.id) {
                                 mutableStateOf(TextFieldValue(displayContent, TextRange(displayContent.length)))
                             }
+                            var undoStack by remember(currentNote.id) { mutableStateOf(listOf<TextFieldValue>()) }
+                            var redoStack by remember(currentNote.id) { mutableStateOf(listOf<TextFieldValue>()) }
                             val content = editorTextFieldValue.text
                             // Check if cursor/content currently has an active [[ autocomplete query
                             val showAutocomplete = content.contains("[[") && !content.substringAfterLast("[[").contains("]")
@@ -530,6 +535,8 @@ fun App() {
                                 EditorToolbar(
                                     value = editorTextFieldValue,
                                     onValueChange = { newValue ->
+                                        undoStack = undoStack + editorTextFieldValue
+                                        redoStack = emptyList()
                                         editorTextFieldValue = newValue
                                         val newStorageContent = if (currentNote.isProtected && unpackedMetadata != null) {
                                             ProtectedNoteCodec.pack(
@@ -547,6 +554,32 @@ fun App() {
                                         storageRepository.saveNote(updated)
                                     },
                                     activeButtonIds = toolbarConfig.activeButtons,
+                                    onUndo = {
+                                        if (undoStack.isNotEmpty()) {
+                                            val prev = undoStack.last()
+                                            undoStack = undoStack.dropLast(1)
+                                            redoStack = redoStack + editorTextFieldValue
+                                            editorTextFieldValue = prev
+                                            val updated = currentNote.copy(content = prev.text, updatedAt = currentTimeMillis())
+                                            activeNote = updated
+                                            notes = notes.map { if (it.id == updated.id) updated else it }
+                                            storageRepository.saveNote(updated)
+                                        }
+                                    },
+                                    onRedo = {
+                                        if (redoStack.isNotEmpty()) {
+                                            val next = redoStack.last()
+                                            redoStack = redoStack.dropLast(1)
+                                            undoStack = undoStack + editorTextFieldValue
+                                            editorTextFieldValue = next
+                                            val updated = currentNote.copy(content = next.text, updatedAt = currentTimeMillis())
+                                            activeNote = updated
+                                            notes = notes.map { if (it.id == updated.id) updated else it }
+                                            storageRepository.saveNote(updated)
+                                        }
+                                    },
+                                    onOpenCustomizer = { showToolbarCustomizer = true },
+                                    isDark = isDarkTheme,
                                     modifier = Modifier.padding(bottom = 4.dp)
                                 )
 
@@ -939,6 +972,28 @@ fun App() {
                     showExportCanvasDialog = true
                     showShareDialog = false
                 }
+            )
+        }
+
+        if (showToolbarCustomizer) {
+            val currentConfig = remember(toolbarConfig) {
+                UserToolbarConfig(
+                    activeButtons = toolbarConfig.activeButtons,
+                    disabledButtons = toolbarConfig.disabledButtons
+                )
+            }
+            ToolbarCustomizationSheet(
+                config = currentConfig,
+                onConfigChange = { updatedConfig ->
+                    val updated = toolbarConfig.copy(
+                        activeButtons = updatedConfig.activeButtons,
+                        disabledButtons = updatedConfig.disabledButtons
+                    )
+                    toolbarConfig = updated
+                    deviceSettingsDriver.saveToolbarConfig(updated)
+                },
+                onDismissRequest = { showToolbarCustomizer = false },
+                isDark = isDarkTheme
             )
         }
     }
