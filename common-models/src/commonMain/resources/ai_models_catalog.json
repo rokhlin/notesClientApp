@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "catalogVersion": "1.0.0",
-  "updatedAt": "2026-09-28T22:00:00Z",
+  "catalogVersion": "1.0.1",
+  "updatedAt": "2026-10-05T05:15:05Z",
   "providers": {
     "GEMINI": {
       "provider": "GEMINI",
@@ -32,6 +32,348 @@
           "displayName": "Gemini 3.0 Pro",
           "tier": "PRO",
           "contextWindow": 2097152,
+          "isRecommended": false,
+          "status": "DEPRECATED",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "displayName": "Gemini 2.5 Pro",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-2.5-pro-preview-tts",
+          "displayName": "Gemini 2.5 Pro Preview TTS",
+          "tier": "PRO",
+          "contextWindow": 8192,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemma-4-26b-a4b-it",
+          "displayName": "Gemma 4 26B A4B IT",
+          "tier": "PRO",
+          "contextWindow": 262144,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemma-4-31b-it",
+          "displayName": "Gemma 4 31B IT",
+          "tier": "PRO",
+          "contextWindow": 262144,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-flash-latest",
+          "displayName": "Gemini Flash Latest",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-flash-lite-latest",
+          "displayName": "Gemini Flash-Lite Latest",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-pro-latest",
+          "displayName": "Gemini Pro Latest",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3-flash-preview",
+          "displayName": "Gemini 3 Flash Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-pro-preview",
+          "displayName": "Gemini 3.1 Pro Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-pro-preview-customtools",
+          "displayName": "Gemini 3.1 Pro Preview Custom Tools",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-lite-preview",
+          "displayName": "Gemini 3.1 Flash Lite Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "displayName": "Gemini 3.1 Flash Lite",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3-pro-image-preview",
+          "displayName": "Nano Banana Pro",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3-pro-image",
+          "displayName": "Nano Banana Pro",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "nano-banana-pro-preview",
+          "displayName": "Nano Banana Pro",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-image-preview",
+          "displayName": "Nano Banana 2",
+          "tier": "PRO",
+          "contextWindow": 65536,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-image",
+          "displayName": "Nano Banana 2",
+          "tier": "PRO",
+          "contextWindow": 65536,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-lite-image",
+          "displayName": "Nano Banana 2 Lite",
+          "tier": "PRO",
+          "contextWindow": 65536,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.5-flash-lite",
+          "displayName": "Gemini 3.5 Flash Lite",
+          "tier": "PRIMARY",
+          "contextWindow": 1048576,
+          "isRecommended": true,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-omni-flash-preview",
+          "displayName": "Gemini Omni Flash Preview",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-omni-1.1-flash",
+          "displayName": "Gemini Omni 1.1 Flash",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.5-transcribe",
+          "displayName": "Gemini 3.5 Transcribe",
+          "tier": "PRO",
+          "contextWindow": 98304,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "displayName": "Gemini 3.6 Flash",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "displayName": "Gemini 3.7 Flash",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "lyria-3-clip-preview",
+          "displayName": "Lyria 3 Clip Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "lyria-3-pro-preview",
+          "displayName": "Lyria 3 Pro Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "lyria-3.5",
+          "displayName": "Lyria 3.5",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.1-flash-tts-preview",
+          "displayName": "Gemini 3.1 Flash TTS Preview",
+          "tier": "PRO",
+          "contextWindow": 8192,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.8-flash-tts",
+          "displayName": "Gemini 3.8 Flash TTS",
+          "tier": "FALLBACK",
+          "contextWindow": 8192,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-3.8-flash-lite-tts",
+          "displayName": "Gemini 3.8 Flash Lite TTS",
+          "tier": "FALLBACK",
+          "contextWindow": 8192,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-robotics-er-2-preview",
+          "displayName": "Gemini Robotics-ER 2 Preview",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-2.5-computer-use-preview-10-2025",
+          "displayName": "Gemini 2.5 Computer Use Preview 10-2025",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "antigravity-preview-05-2026",
+          "displayName": "Antigravity Agent Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "antigravity-preview-09-2026",
+          "displayName": "Antigravity Agent Preview",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "antigravity-preview-latest",
+          "displayName": "Antigravity Agent Preview Latest",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "deep-research-max-preview-04-2026",
+          "displayName": "Deep Research Max Preview (Apr-21-2026)",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "deep-research-preview-04-2026",
+          "displayName": "Deep Research Preview (Apr-21-2026)",
+          "tier": "PRO",
+          "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "deep-research-pro-preview-12-2025",
+          "displayName": "Deep Research Pro Preview (Dec-12-2025)",
+          "tier": "PRO",
+          "contextWindow": 131072,
           "isRecommended": false,
           "status": "ACTIVE",
           "sunsetDate": null
