@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "catalogVersion": "1.0.3",
-  "updatedAt": "2026-10-19T04:19:04Z",
+  "catalogVersion": "1.0.4",
+  "updatedAt": "2026-11-09T05:52:14Z",
   "providers": {
     "GEMINI": {
       "provider": "GEMINI",
@@ -392,6 +392,15 @@
           "displayName": "Gemini 4 Argon",
           "tier": "PRO",
           "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-omni-1.2-flash",
+          "displayName": "Gemini Omni 1.2 Flash",
+          "tier": "PRO",
+          "contextWindow": 131072,
           "isRecommended": false,
           "status": "ACTIVE",
           "sunsetDate": null
