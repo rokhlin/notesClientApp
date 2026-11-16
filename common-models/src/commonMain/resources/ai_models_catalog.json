@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "catalogVersion": "1.0.4",
-  "updatedAt": "2026-11-09T05:52:14Z",
+  "catalogVersion": "1.0.5",
+  "updatedAt": "2026-11-16T05:59:18Z",
   "providers": {
     "GEMINI": {
       "provider": "GEMINI",
@@ -401,6 +401,24 @@
           "displayName": "Gemini Omni 1.2 Flash",
           "tier": "PRO",
           "contextWindow": 131072,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-4-carbon",
+          "displayName": "Gemini 4 Carbon",
+          "tier": "PRO",
+          "contextWindow": 1048576,
+          "isRecommended": false,
+          "status": "ACTIVE",
+          "sunsetDate": null
+        },
+        {
+          "id": "gemini-4-hydrogen",
+          "displayName": "Gemini 4 Hydrogen",
+          "tier": "PRO",
+          "contextWindow": 1048576,
           "isRecommended": false,
           "status": "ACTIVE",
           "sunsetDate": null
